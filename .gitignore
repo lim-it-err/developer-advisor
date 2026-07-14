@@ -13,7 +13,7 @@ target/
 *.db
 *.mv.db
 *.trace.db
-data/
+/service/data/
 
 # IDE
 .idea/
