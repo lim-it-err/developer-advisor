@@ -1,0 +1,9 @@
+# ollama profile — local model server, no API key needed.
+advisor:
+  llm:
+    roles:
+      generate: { provider: ollama, model: llama3.1 }
+      review: { provider: ollama, model: llama3.1 }
+      chat: { provider: ollama, model: llama3.1 }
+    ollama:
+      base-url: ${OLLAMA_BASE_URL:http://localhost:11434}

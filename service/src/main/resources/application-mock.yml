@@ -1,0 +1,7 @@
+# mock profile — default. No secrets, no network. All LLM roles route to the mock provider.
+advisor:
+  llm:
+    roles:
+      generate: { provider: mock, model: default }
+      review: { provider: mock, model: default }
+      chat: { provider: mock, model: default }

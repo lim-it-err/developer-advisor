@@ -1,0 +1,33 @@
+# Node / Vite
+node_modules/
+dist/
+*.local
+
+# Maven / Java
+target/
+*.class
+*.jar
+!.mvn/wrapper/maven-wrapper.jar
+
+# H2 database files
+*.db
+*.mv.db
+*.trace.db
+data/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.settings/
+.classpath
+.project
+
+# OS
+.DS_Store
+
+# Logs / env
+*.log
+.env
+.env.*
+.claude/settings.local.json

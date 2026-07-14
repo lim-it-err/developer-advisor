@@ -1,0 +1,11 @@
+# claude profile — real Anthropic Messages API calls. Requires env ANTHROPIC_API_KEY.
+advisor:
+  llm:
+    roles:
+      generate: { provider: claude, model: claude-sonnet-5 }
+      review: { provider: claude, model: claude-sonnet-5 }
+      chat: { provider: claude, model: claude-haiku-4-5-20251001 } # chat = Haiku (CURRICULUM: fast/cheap)
+    claude:
+      base-url: https://api.anthropic.com
+      api-key: ${ANTHROPIC_API_KEY:}
+      version: "2023-06-01"
