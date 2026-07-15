@@ -43,19 +43,28 @@
   color: var(--fg);
   font-weight: 700;
   font-size: 17px;
+  flex-shrink: 0;
 }
 .brand-mark { color: var(--accent); }
 .brand-tag {
   color: var(--fg-dim);
   font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
 }
 .nav {
   margin-left: auto;
+  flex-shrink: 0;
 }
 .nav-link {
   color: var(--fg-dim);
   text-decoration: none;
   font-size: 13.5px;
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
 }
 .nav-link:hover {
   color: var(--accent);
@@ -77,5 +86,23 @@
   border-top: 1px solid var(--border);
   color: var(--fg-dim);
   font-size: 12px;
+}
+
+@media (max-width: 700px) {
+  .shell-header {
+    padding: 14px 16px;
+    gap: 10px;
+  }
+  .brand-name { font-size: 15px; }
+  .brand-tag {
+    display: none;
+  }
+  .shell-main {
+    padding: 16px;
+  }
+  .shell-footer {
+    padding: 12px 16px;
+    font-size: 11px;
+  }
 }
 </style>

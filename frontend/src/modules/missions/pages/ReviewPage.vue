@@ -282,4 +282,15 @@ h1 { font-size: 22px; margin: 12px 0 8px; }
 .rep-label { font-weight: 700; font-size: 13px; }
 .good-label { color: var(--good); }
 .warn-label { color: var(--warn); }
+
+@media (max-width: 700px) {
+  h1 { font-size: 19px; }
+  .card { padding: 14px; }
+  .overall { flex-wrap: wrap; gap: 12px; }
+  .overall-score { font-size: 34px; }
+  .ending-stamp { flex-wrap: wrap; row-gap: 6px; }
+  .hc { padding: 10px 12px; }
+  .actions { flex-wrap: wrap; }
+  .actions .btn { flex: 1 1 auto; text-align: center; min-height: 40px; }
+}
 </style>

@@ -106,4 +106,19 @@ async function copyActive() {
   max-height: 520px;
   overflow-y: auto;
 }
+
+@media (max-width: 700px) {
+  .bar { padding: 6px 6px 0; }
+  .tab { font-size: 12px; padding: 6px 10px; }
+  .copy {
+    position: sticky;
+    right: 0;
+    background: var(--bg-soft);
+  }
+  .code {
+    font-size: 12px;
+    padding: 12px;
+    max-height: 380px;
+  }
+}
 </style>

@@ -172,4 +172,30 @@ async function send() {
   resize: none;
 }
 .input-row textarea:focus { outline: none; border-color: var(--accent); }
+
+@media (max-width: 600px) {
+  .fab {
+    right: 16px;
+    bottom: 16px;
+    padding: 11px 16px;
+    font-size: 13.5px;
+  }
+  .panel {
+    width: 100vw;
+    max-width: 100vw;
+  }
+  .input-row {
+    padding: 10px;
+    gap: 6px;
+  }
+  .input-row textarea {
+    font-size: 13px;
+    padding: 8px 9px;
+  }
+  .input-row .btn.primary {
+    padding: 9px 12px;
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+}
 </style>

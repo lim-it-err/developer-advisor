@@ -206,4 +206,15 @@ function submitAgreement() {
   font-size: 13.5px;
   padding: 12px 16px;
 }
+
+@media (max-width: 700px) {
+  .card { padding: 14px; }
+  .stakeholders { grid-template-columns: 1fr; }
+  .meeting-room .messages { max-height: 300px; }
+  .msg { max-width: 92%; }
+  .input-row { flex-wrap: wrap; }
+  .input-row textarea { flex: 1 1 100%; }
+  .input-row .btn.primary { min-height: 40px; }
+  .submit-row { flex-wrap: wrap; }
+}
 </style>

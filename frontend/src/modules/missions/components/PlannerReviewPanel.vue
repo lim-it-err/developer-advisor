@@ -99,4 +99,11 @@ function submitReview() {
   font-size: 13.5px;
   padding: 12px 16px;
 }
+
+@media (max-width: 700px) {
+  .card { padding: 14px; }
+  .dimensions { grid-template-columns: 1fr; }
+  .deliverable-input { min-height: 220px; }
+  .submit-row { flex-wrap: wrap; }
+}
 </style>

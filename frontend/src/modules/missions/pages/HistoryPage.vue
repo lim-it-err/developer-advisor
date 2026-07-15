@@ -165,4 +165,18 @@ function formatDate(iso) {
 
 .empty { text-align: center; padding: 40px 20px; color: var(--fg); }
 .empty p { margin: 6px 0; }
+
+@media (max-width: 700px) {
+  .hero h1 { font-size: 19px; }
+  .stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .stat { padding: 14px 10px; }
+  .stat-num { font-size: 24px; }
+  .stat-emojis { white-space: normal; word-break: break-word; line-height: 1.5; min-height: 0; }
+  .entry { padding: 14px; }
+  .entry-top { flex-wrap: wrap; gap: 6px; }
+  .chips { flex-wrap: wrap; }
+  .entry-bottom { flex-wrap: wrap; gap: 6px; }
+}
 </style>

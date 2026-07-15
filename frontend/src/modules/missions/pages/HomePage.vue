@@ -114,4 +114,21 @@ const doneCount = computed(() => Object.keys(state.submissions).length)
 .mc-bottom { display: flex; justify-content: space-between; align-items: center; }
 .mc-status { font-size: 12.5px; color: var(--fg-dim); }
 .mc-status.done { color: var(--good); }
+
+@media (max-width: 700px) {
+  .hero h1 { font-size: 19px; }
+  .stage { padding: 14px 14px; }
+  .stage-head { flex-wrap: wrap; gap: 8px; }
+  .mission-cards {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  }
+  .mc-top { flex-wrap: wrap; gap: 6px; }
+  .chips { flex-wrap: wrap; }
+}
+
+@media (max-width: 400px) {
+  .mission-cards {
+    grid-template-columns: 1fr;
+  }
+}
 </style>
