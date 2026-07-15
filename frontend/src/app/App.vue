@@ -36,6 +36,7 @@ function onNicknameCancelled() {
           title="닉네임 변경"
           @click="openNicknamePrompt"
         >👤 {{ nickname }}</button>
+        <router-link to="/projects" class="nav-link">프로젝트</router-link>
         <router-link to="/missions/history" class="nav-link">성장 기록</router-link>
       </nav>
     </header>

@@ -2,6 +2,7 @@
 // 실제 서비스에서는 이 파일만 API 클라이언트 호출로 교체된다 (모듈 밖 인터페이스는 동일).
 import { reactive } from 'vue'
 import sample from '../data/sampleContent.js'
+import projectSample from '../data/sampleProjects.js'
 
 const STORAGE_KEY = 'advisor.learner.v1'
 
@@ -72,6 +73,10 @@ const state = reactive({
   plannerSubmissions: persisted.plannerSubmissions ?? {},
   // 학습자: 기록 구분용 닉네임. 인증 아님 — 단순 식별자.
   learner: persisted.learner ?? { nickname: '' },
+  // 프로젝트 모드(맨땅에서): 캠페인 데이터.
+  projects: projectSample.projects ?? [],
+  // 프로젝트 모드 제출물. subMissionId -> { files, submittedAt, by }
+  projectSubmissions: persisted.projectSubmissions ?? {},
 })
 
 function persist() {
@@ -84,6 +89,7 @@ function persist() {
       meetingChats: state.meetingChats,
       plannerSubmissions: state.plannerSubmissions,
       learner: state.learner,
+      projectSubmissions: state.projectSubmissions,
     }),
   )
 }
@@ -100,6 +106,46 @@ export function useMissions() {
     missionStatus(id) {
       if (state.submissions[id]) return '제출됨'
       return '진행 가능'
+    },
+
+    // ---- 프로젝트 모드(맨땅에서): 여정 지도 캠페인 ----
+
+    getProject(id) {
+      return state.projects.find((p) => p.id === id)
+    },
+
+    // 소미션 i는 i===0 이거나 직전 소미션이 제출되어 있으면 해금.
+    isSubMissionUnlocked(project, index) {
+      if (!project?.subMissions?.length) return false
+      if (index === 0) return true
+      const prev = project.subMissions[index - 1]
+      return !!state.projectSubmissions[prev.id]
+    },
+
+    // { done, total, currentIndex } — currentIndex는 "지금 해야 할" 소미션 인덱스.
+    // 전부 끝났으면 마지막 인덱스를 가리킨다(완료 표시용).
+    projectProgress(projectId) {
+      const project = state.projects.find((p) => p.id === projectId)
+      const subMissions = project?.subMissions ?? []
+      const total = subMissions.length
+      const done = subMissions.filter((sm) => !!state.projectSubmissions[sm.id]).length
+      const currentIndex = total === 0 ? -1 : done >= total ? total - 1 : done
+      return { done, total, currentIndex }
+    },
+
+    submitSubMission(subMissionId, files) {
+      state.projectSubmissions[subMissionId] = {
+        files: files.filter((f) => f.path.trim() && f.content.trim()),
+        submittedAt: new Date().toISOString(),
+        by: state.learner.nickname || null,
+      }
+      persist()
+    },
+
+    // 프로토타입: 소미션 리뷰는 사전 생성된 샘플.
+    getSubReview(subMissionId) {
+      if (!state.projectSubmissions[subMissionId]) return null
+      return projectSample.sampleSubReviews?.[subMissionId] ?? null
     },
 
     setNickname(name) {

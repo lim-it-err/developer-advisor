@@ -28,6 +28,11 @@ const doneCount = computed(() => Object.keys(state.submissions).length)
       </p>
     </section>
 
+    <router-link v-if="state.projects?.length" to="/projects" class="project-banner card">
+      <span class="pb-text">🚲 새로운 모드: 프로젝트 — 맨땅에서</span>
+      <span class="pb-arrow">→</span>
+    </router-link>
+
     <section v-for="p in stagesByPart" :key="p.no" class="part">
       <div class="part-head">
         <span class="part-no">제{{ p.no }}부</span>
@@ -88,6 +93,21 @@ const doneCount = computed(() => Object.keys(state.submissions).length)
 <style scoped>
 .hero h1 { font-size: 24px; margin: 0 0 6px; }
 .sub { color: var(--fg-dim); margin: 0 0 26px; }
+.project-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  text-decoration: none;
+  color: var(--fg);
+  margin-bottom: 30px;
+  padding: 14px 20px;
+  border-color: rgba(122, 162, 247, 0.35);
+  background: linear-gradient(90deg, rgba(122, 162, 247, 0.08), transparent 60%), var(--bg-card);
+  transition: border-color 0.15s;
+}
+.project-banner:hover { border-color: var(--accent); }
+.pb-text { font-weight: 600; font-size: 14.5px; }
+.pb-arrow { color: var(--accent); font-weight: 700; }
 .part { margin-bottom: 34px; }
 .part-head {
   display: flex;

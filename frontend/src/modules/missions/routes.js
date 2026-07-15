@@ -21,4 +21,14 @@ export const missionRoutes = [
     name: 'mission-review',
     component: () => import('./pages/ReviewPage.vue'),
   },
+  {
+    path: '/projects',
+    name: 'project-list',
+    component: () => import('./pages/ProjectsPage.vue'),
+  },
+  {
+    path: '/projects/:id',
+    name: 'project-journey',
+    component: () => import('./pages/ProjectJourneyPage.vue'),
+  },
 ]
