@@ -1,8 +1,13 @@
 <script setup>
 import { computed } from 'vue'
 import { useMissions } from '../store/missions.js'
+import { PARTS } from '../store/missions.js'
 
 const { state, stages, missionStatus } = useMissions()
+
+const stagesByPart = computed(() =>
+  PARTS.map((p) => ({ ...p, stages: stages.filter((s) => s.part === p.no) })),
+)
 
 const missionsByStage = computed(() => {
   const map = {}
@@ -23,9 +28,15 @@ const doneCount = computed(() => Object.keys(state.submissions).length)
       </p>
     </section>
 
-    <section class="stages">
+    <section v-for="p in stagesByPart" :key="p.no" class="part">
+      <div class="part-head">
+        <span class="part-no">제{{ p.no }}부</span>
+        <span class="part-title">{{ p.title }}</span>
+        <span class="part-tagline">{{ p.tagline }}</span>
+      </div>
+      <div class="stages">
       <div
-        v-for="s in stages"
+        v-for="s in p.stages"
         :key="s.no"
         class="stage"
         :class="{ empty: !missionsByStage[s.no] }"
@@ -69,6 +80,7 @@ const doneCount = computed(() => Object.keys(state.submissions).length)
         </div>
         <p v-else class="coming">미션 준비 중 — 에이전트가 생성합니다</p>
       </div>
+      </div>
     </section>
   </div>
 </template>
@@ -76,6 +88,24 @@ const doneCount = computed(() => Object.keys(state.submissions).length)
 <style scoped>
 .hero h1 { font-size: 24px; margin: 0 0 6px; }
 .sub { color: var(--fg-dim); margin: 0 0 26px; }
+.part { margin-bottom: 34px; }
+.part-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+.part-no {
+  font-weight: 800;
+  font-size: 13px;
+  color: var(--accent);
+  letter-spacing: 0.5px;
+}
+.part-title { font-weight: 800; font-size: 18px; }
+.part-tagline { color: var(--fg-dim); font-size: 12.5px; }
 .stages { display: flex; flex-direction: column; gap: 18px; }
 .stage {
   border: 1px solid var(--border);

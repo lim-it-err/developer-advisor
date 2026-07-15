@@ -31,18 +31,24 @@ async function requestChatPreview(context, history, text) {
   }
 }
 
+export const PARTS = [
+  { no: 1, title: '분리와 계약', tagline: '코드 안의 전쟁 — 책임을 나누고, 계약을 긋고, 레거시를 길들인다' },
+  { no: 2, title: '구조와 세계', tagline: '시스템과 사람 — 경계는 코드가 아니라 세계에 긋는 것이다' },
+  { no: 3, title: '현실의 압력', tagline: '테스트, 실패, 동시성, 데이터, 그리고 단순함 — 운영이 가르치는 것들' },
+]
+
 export const STAGES = [
-  { no: 1, title: '분리의 감각', question: '이 코드가 변경되는 이유는 몇 개인가?' },
-  { no: 2, title: '인터페이스는 계약', question: '호출자는 무엇을 알아야 하고, 무엇을 몰라야 하는가?' },
-  { no: 3, title: '의존성 역전', question: '도메인 로직이 DB 없이 테스트되는가?' },
-  { no: 4, title: '레거시 길들이기', question: '무엇이 부서질지 모른 채 어떻게 고치는가?' },
-  { no: 5, title: '거대한 구조', question: '어디서 모델을 갈라야 하는가?' },
-  { no: 6, title: '구조로 세상 읽기', question: '이 시스템의 세계관은 무엇인가?' },
-  { no: 7, title: '테스트가 설계를 이끈다', question: '테스트가 괴로운 건 테스트 탓인가, 설계 탓인가?' },
-  { no: 8, title: '실패를 설계하다', question: '이 시스템은 어떻게 죽고, 어떻게 다시 일어나는가?' },
-  { no: 9, title: '동시성의 감각', question: '이 코드에 두 명이 동시에 들어오면 무슨 일이 벌어지는가?' },
-  { no: 10, title: '데이터가 흐르는 길', question: '진실은 어디에 있고, 사본은 언제 거짓말하는가?' },
-  { no: 11, title: '단순함의 철학', question: '이 복잡함은 문제의 것인가, 우리가 만든 것인가?' },
+  { no: 1, part: 1, title: '분리의 감각', question: '이 코드가 변경되는 이유는 몇 개인가?' },
+  { no: 2, part: 1, title: '인터페이스는 계약', question: '호출자는 무엇을 알아야 하고, 무엇을 몰라야 하는가?' },
+  { no: 3, part: 1, title: '의존성 역전', question: '도메인 로직이 DB 없이 테스트되는가?' },
+  { no: 4, part: 1, title: '레거시 길들이기', question: '무엇이 부서질지 모른 채 어떻게 고치는가?' },
+  { no: 5, part: 2, title: '거대한 구조', question: '어디서 모델을 갈라야 하는가?' },
+  { no: 6, part: 2, title: '구조로 세상 읽기', question: '이 시스템의 세계관은 무엇인가?' },
+  { no: 7, part: 3, title: '테스트가 설계를 이끈다', question: '테스트가 괴로운 건 테스트 탓인가, 설계 탓인가?' },
+  { no: 8, part: 3, title: '실패를 설계하다', question: '이 시스템은 어떻게 죽고, 어떻게 다시 일어나는가?' },
+  { no: 9, part: 3, title: '동시성의 감각', question: '이 코드에 두 명이 동시에 들어오면 무슨 일이 벌어지는가?' },
+  { no: 10, part: 3, title: '데이터가 흐르는 길', question: '진실은 어디에 있고, 사본은 언제 거짓말하는가?' },
+  { no: 11, part: 3, title: '단순함의 철학', question: '이 복잡함은 문제의 것인가, 우리가 만든 것인가?' },
 ]
 
 function load() {

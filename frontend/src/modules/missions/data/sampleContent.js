@@ -4374,6 +4374,2337 @@ public class ScoreCalculator {
       },
     ],
   },
+
+  // =========================================================================
+  // Mission 18 — Stage 7 "테스트가 설계를 이끈다" / 전기요금 / 도메인 로직 구현
+  // =========================================================================
+  {
+    id: 's7-tariff-01',
+    stage: 7,
+    stageTitle: '테스트가 설계를 이끈다',
+    missionType: '도메인 로직 구현',
+    difficulty: 'Normal',
+    scope: '단일 파일',
+    modes: ['developer'],
+    domain: '전기요금 · 누진제',
+    domainEmoji: '⚡',
+    title: '요금 폭탄의 경계선 — 테스트 먼저 쓰는 누진제 계산기',
+    estimatedMinutes: 120,
+    briefing: {
+      title: '경계값을 아는 자가 도메인을 아는 자다',
+      content: `### 1974년에 태어난 계단
+
+주택용 전기요금 누진제는 1974년 오일쇼크의 산물입니다. 기름 한 방울 안 나는 나라에서 전기를 아껴 쓰게 하려면, 많이 쓸수록 단가가 비싸지는 계단을 만들면 된다는 발상이었죠. 이 계단은 점점 가팔라져 한때 6단계, 최고 단가가 최저 단가의 11배를 넘었습니다.
+
+### 2016년 여름, 계단이 무너지다
+
+그리고 2016년의 기록적 폭염. 에어컨을 튼 가정들의 고지서에 평소의 두세 배 요금이 찍히면서 "요금 폭탄" 민원이 폭발했습니다. 결국 그해 12월 누진제는 6단계에서 3단계로 개편됐고, 이후 여름(7~8월)에는 구간 자체를 넓혀 주는 완화 조치가 더해졌습니다. 같은 350kWh를 써도 7월과 6월의 요금이 다른 이유입니다. 요금표는 정치와 날씨의 역사이고, 그 역사는 전부 **경계값**에 새겨져 있습니다 — 몇 kWh에서 계단이 꺾이는가, 하계는 언제 시작되는가.
+
+### 테스트를 먼저 쓴다는 것
+
+켄트 벡의 《테스트 주도 개발》이 가르치는 것은 테스트 기법이 아니라 순서입니다. 코드를 쓰기 전에 "이 코드가 통과해야 할 시험 목록"을 먼저 적는 것. 누진제 계산기라면 그 목록은 자명합니다 — 정확히 300kWh인 달, 0kWh인 달, 구간이 꺾이는 딱 그 지점들. 경계값 목록을 막힘없이 적을 수 있다면 도메인을 이해한 것이고, 적다가 막힌다면 아직 스펙을 다 읽지 않은 것입니다. 테스트는 검사 도구이기 전에 **이해했음의 증거**입니다. 이번 미션에서는 그 증거를 구현보다 먼저 제출하게 됩니다.`,
+    },
+    scenario: `에너지 절약 앱 스타트업이 **"이번 달 예상 전기요금" 기능**을 만듭니다. 사용자가 사용량을 넣으면 누진제 요금을 보여 주는 계산기인데, 지난달 베타에서 경쟁 앱이 300kWh 경계에서 요금을 틀리게 보여 줘 앱스토어 리뷰가 무너지는 것을 다 같이 목격했습니다. 그래서 팀 리드의 지시가 특별합니다 — **"구현 말고 테스트부터 보여 주세요. 어떤 경계를 검증할 건지 목록으로."** 이번 미션의 제출물은 절반이 테스트입니다.`,
+    providedFiles: [],
+    legacyFiles: [
+      {
+        path: 'src/main/java/com/daehan/tariff/TariffCalculator.java',
+        content: `package com.daehan.tariff;
+
+/**
+ * 주택용 누진제 요금 계산기 (구현 대상).
+ *
+ * 이 스테이지의 규칙: 이 파일보다 테스트 파일을 먼저 여세요.
+ * 1) 검증할 항목의 목록(테스트 리스트)을 테스트 파일 상단 주석으로 먼저 적는다.
+ * 2) 테스트 하나를 쓰고, 통과할 만큼만 구현하고, 다음 테스트로 간다.
+ * 리뷰는 구현 코드만큼 테스트 코드를 읽습니다 — 이름이 스펙을 말하는지,
+ * 한 테스트가 한 가지를 검증하는지, 경계가 빠짐없이 못박혔는지.
+ */
+public class TariffCalculator {
+
+    /** 월 사용량(kWh)과 청구월(1~12)로 요금(원)을 계산한다. 규칙은 요구사항 참조. */
+    public int monthlyBill(int usageKwh, int billingMonth) {
+        // TODO 구현 — 단, 테스트가 먼저입니다.
+        throw new UnsupportedOperationException("아직 구현되지 않았습니다");
+    }
+}`,
+      },
+    ],
+    requirements: [
+      '요금표(이 미션의 단순화 기준값): 3구간 누진제. 구간 경계는 비하계 200/400kWh, 하계(7월·8월) 300/450kWh. 기본요금은 도달한 최고 구간 기준으로 1구간 900원, 2구간 1,600원, 3구간 7,300원. 전력량요금은 구간별 단가 × 그 구간에서 쓴 양으로, 1구간 100원/kWh, 2구간 200원/kWh, 3구간 300원/kWh. 요금 = 기본요금 + 전력량요금 합계.',
+      '검증 예제 1: 350kWh를 6월(비하계)에 쓰면 1,600 + 200×100 + 150×200 = 51,600원. 같은 350kWh를 8월(하계)에 쓰면 1,600 + 300×100 + 50×200 = 41,600원. 하계 완화 한 줄이 정확히 10,000원 차이를 만듭니다 — 2016년 여름 민원의 축소판입니다.',
+      '검증 예제 2: 500kWh는 비하계 7,300 + 20,000 + 40,000 + 30,000 = 97,300원, 하계 7,300 + 30,000 + 30,000 + 15,000 = 82,300원.',
+      '구현보다 테스트를 먼저 작성하세요. 테스트 파일 상단에 테스트 리스트(무엇을 검증하는지 한 줄씩)를 주석으로 남기고, 리스트의 항목과 테스트 메서드가 1:1로 대응해야 합니다. 경계값 — 0kWh, 정확히 200/300/400/450kWh, 하계 경계월(6월 vs 7월, 8월 vs 9월) — 은 각각 별도의 테스트로 못박혀야 합니다.',
+      '테스트 이름은 서술형으로: "test1" 이 아니라 "하계_경계인_정확히_300kWh는_1구간_기본요금을_적용한다"처럼, 이름만 읽어도 스펙이 복원되는 수준이어야 합니다. 한 테스트는 한 가지만 검증합니다.',
+      '기획팀 전달: "복지 할인(다자녀·생명유지장치)도 곧 반영해야 해요." (할인율과 누진 계산과의 적용 순서는 요금팀 회신 전입니다)',
+    ],
+    constraints: [
+      '요금표의 숫자와 경계는 위 스펙 그대로 구현합니다. 실제 한전 요금표와는 단가가 다른 학습용 기준값임을 코드 주석에 명시하세요.',
+      '금액은 정수(원)로 다루며 임의 반올림을 금지합니다.',
+      '테스트 프레임워크는 JUnit 스타일로 가정하되, 실행 환경이 없어도 읽는 것만으로 검증 의도가 전달되게 작성하세요.',
+      '외부 라이브러리 없이 순수 Java 17로 작성합니다.',
+    ],
+    learningGoals: [
+      '테스트 리스트를 먼저 적는 습관 — 경계값 목록이 곧 도메인 이해의 증거임을 체감하기',
+      '테스트가 이끄는 구현: 한 번에 전부가 아니라, 테스트 하나를 통과할 만큼씩 자라는 코드',
+      '서술적 테스트 이름과 "한 테스트 한 검증"으로, 테스트 코드를 두 번째 스펙 문서로 만들기',
+      '경계값(구간, 계절)이 몰린 도메인에서 테스트하기 쉬운 구조(구간표의 데이터화)가 저절로 유도되는 경험',
+    ],
+    hints: [
+      '테스트 리스트가 먼저입니다. 스펙을 읽으며 "요금이 꺾이는 지점"을 전부 적어 보세요 — 0, 200, 300, 400, 450, 그리고 6월↔7월. 리스트가 10줄을 넘지 않으면 아직 하계×구간 조합을 다 못 본 것입니다.',
+      '정확히 300kWh는 6월에는 2구간 요금(기본 1,600원)이고 8월에는 1구간 요금(기본 900원)입니다. 이 한 쌍을 테스트로 먼저 못박으면, "하계 여부 → 구간표 선택 → 구간별 합산"이라는 구현 순서가 저절로 그려집니다.',
+      '구간 경계(200/400, 300/450)를 if 조건식에 흩뿌리면 테스트가 실패할 때마다 조건식을 다시 읽어야 합니다. 구간표를 데이터(경계, 기본요금, 단가의 목록)로 두고 계산 루프는 하나만 두면, 테스트도 표도 읽기 쉬워지고 4번째 구간이 와도 표 한 줄입니다.',
+    ],
+    hiddenCases: [
+      {
+        title: '음수 사용량',
+        description:
+          '계량기 교체나 검침 보정 롤백으로 사용량이 음수로 들어오는 달이 실제로 있습니다. 순진한 계산기는 음수 구간을 만들어 마이너스 요금 고지서를 뽑습니다. 좋은 방어: 사용량 ≥ 0 검증을 입구에 두고 위반 시 명시적으로 실패하세요 — 그리고 그 검증도 테스트 리스트의 한 줄이어야 합니다. 방어 코드에 테스트가 없으면 다음 리팩토링 때 소리 없이 사라집니다.',
+      },
+      {
+        title: '15일짜리 달',
+        description:
+          '검침일이 바뀌면 사용일수가 15일뿐인 청구월이 생깁니다. 실제 요금 제도는 이런 달의 구간을 일수 비례로 조정하는데, 이 미션의 스펙에는 그 규칙이 없습니다. 좋은 방어: 없는 규칙을 임의로 구현하지 말고, "사용일수가 표준과 다른 달"이 스펙 밖임을 가정으로 문서화하고 질문으로 되돌리세요. 테스트 리스트에 "미결: 단수 청구월"이라고 적어 두는 것 — 그것도 테스트 주도의 일부입니다.',
+      },
+      {
+        title: '4번째 구간이 생기는 날',
+        description:
+          '누진제는 정치와 날씨에 따라 다시 개편됩니다. 4구간 신설이나 경계 이동이 왔을 때, 구간이 if-else 사슬에 박혀 있으면 모든 조건식을 다시 검산해야 하고, 구간표가 데이터라면 표 한 줄과 테스트 몇 개로 끝납니다. 좋은 방어: 지금 만든 경계값 테스트들이 개정 후에도 회귀 그물로 작동하는지 — 테스트가 구현 세부가 아니라 스펙(입력→요금)을 검증하고 있는지 확인하세요. 구현에 붙은 테스트는 개편 날 전부 다시 씁니다.',
+      },
+    ],
+    rubric: [
+      {
+        name: '테스트 품질',
+        description: '경계값(0, 200/300/400/450, 하계 경계월)이 빠짐없이 별도 테스트로 못박혔는가. 테스트 이름이 스펙을 서술하는가. 한 테스트가 한 가지만 검증하는가.',
+        weight: 30,
+        visibleToLearner: true,
+      },
+      {
+        name: '테스트 우선의 증거',
+        description: '테스트 리스트 주석이 있고 테스트 메서드와 1:1 대응하는가. 구현이 테스트 목록의 범위를 넘어 과잉 설계되지 않았는가.',
+        weight: 15,
+        visibleToLearner: true,
+      },
+      {
+        name: '도메인 규칙 정확성',
+        description: '두 검증 예제(51,600/41,600원, 97,300/82,300원)와 경계값 요금이 스펙과 정확히 일치하는가.',
+        weight: 30,
+        visibleToLearner: true,
+      },
+      {
+        name: '계산 코드의 단순성',
+        description: '구간표가 데이터로 표현되어 계산 루프가 하나인가. 하계 완화가 표 선택으로 흡수되어 조건 분기가 흩어지지 않았는가.',
+        weight: 15,
+        visibleToLearner: true,
+      },
+      {
+        name: '모호한 요구사항 확인',
+        description: '복지 할인의 적용 순서 같은 미정 규칙을 임의 확정하지 않고 질문했거나 테스트 리스트에 미결로 기록했는가.',
+        weight: 10,
+        visibleToLearner: false,
+      },
+    ],
+    explainTask: {
+      audience: '테스트 코드를 "일 두 번 하는 것"이라 생각하는 옆 팀 선배 개발자',
+      prompt:
+        '선배에게 설명해 주세요. (1) 왜 이 계산기는 테스트를 먼저 썼는지 — 경계값 목록을 적는 행위가 스펙 읽기의 완성이라는 것을 300kWh의 6월/8월 요금 차이로, (2) 테스트 리스트 주석이 어떻게 코드 리뷰와 신규 입사자 온보딩 문서를 겸하는지, (3) 4번째 구간이 신설되는 날 테스트가 있는 팀과 없는 팀의 그날 하루가 어떻게 다른지를 시간 순서로. 정색한 원칙 강의가 아니라, 같이 겪은 "경쟁 앱 300kWh 사태"에서 출발하세요.',
+    },
+    endings: [
+      {
+        grade: 'calm',
+        title: '고지서와 같은 숫자',
+        teaser: '사용자들이 실제 고지서와 앱을 대조하기 시작하고, 숫자는 한 번도 다르지 않다. 앱스토어 리뷰에 "이 앱은 경계에서 안 틀림"이라는 문장이 올라온다.',
+      },
+      {
+        grade: 'hotfix',
+        title: '여름마다 열리는 파일',
+        teaser: '대체로 맞는다. 다만 하계 경계가 걸린 문의가 올 때마다 계산 코드를 열어 눈으로 검산하고, 7월 첫 주는 매년 조금 길게 느껴진다.',
+      },
+      {
+        grade: 'dawn',
+        title: '경계의 리뷰 폭탄',
+        teaser: '정확히 300kWh를 쓴 하계 사용자들에게 2구간 요금이 표시되고, "이 앱도 똑같네"라는 리뷰가 별점 하나와 함께 쌓인다. 경쟁 앱의 사태가 이번에는 당신의 사례가 된다.',
+      },
+      {
+        grade: 'hidden',
+        title: '???',
+        teaser: '이 결말의 검침은 아직 이루어지지 않았습니다. 조건은 비공개입니다.',
+      },
+    ],
+  },
+
+  // =========================================================================
+  // Mission 19 — Stage 8 "실패를 설계하다" / 결제 / 기능 추가
+  // =========================================================================
+  {
+    id: 's8-payment-01',
+    stage: 8,
+    stageTitle: '실패를 설계하다',
+    missionType: '기능 추가',
+    difficulty: 'Hard',
+    scope: '여러 파일',
+    modes: ['developer'],
+    domain: '결제 · PG 연동',
+    domainEmoji: '💳',
+    title: '타임아웃 너머의 결제 — 멱등키와 보상의 설계',
+    estimatedMinutes: 150,
+    briefing: {
+      title: '모른다는 상태를 설계하라',
+      content: `### 타임아웃의 딜레마
+
+결제 요청을 보냈는데 30초가 지나도록 응답이 없습니다. 자, 결제는 된 걸까요, 안 된 걸까요? 정답은 "모른다"입니다. 요청이 PG사에 닿기 전에 죽었을 수도, 승인은 됐는데 응답만 길에서 사라졌을 수도 있습니다. 여기서 순진한 재시도를 하면 고객 카드에 같은 금액이 두 번 찍히고(이중 결제), 재시도를 포기하면 돈은 나갔는데 주문은 없는 유령 결제가 남습니다. 실제 커머스 장애 보고서의 단골 유형이 정확히 이 두 갈래입니다.
+
+### 잘 실패하는 시스템
+
+마이클 나이가드의 《Release It!》은 이 지점에서 관점을 뒤집습니다 — 목표는 실패하지 않는 시스템이 아니라 **잘 실패하는 시스템**이다. 외부 연동 지점(integration point)은 언젠가 반드시 느려지고 끊어지므로, 타임아웃을 명시하고, 무너진 연동이 전체를 끌고 내려가지 않게 격벽을 치고, 그리고 무엇보다 "모른다"라는 결과를 일급 상태로 다루라는 것입니다. 실패 경로를 설계하지 않은 시스템은 실패 경로를 고객이 발견해 줍니다.
+
+### 같은 질문에는 같은 답 — 멱등성
+
+딜레마를 푸는 열쇠는 **멱등키(idempotency key)**입니다. 재시도를 "새 결제"가 아니라 "아까 그 결제, 어떻게 됐어요?"로 만드는 것 — 같은 주문에는 같은 참조번호를 붙여 보내면, PG사는 이미 처리한 요청을 다시 승인하는 대신 그때의 결과를 돌려줍니다. 타임아웃이 나면 단정하지 말고 그 번호로 조회하고, 승인됐는데 주문을 확정할 수 없다면 취소로 되돌립니다(보상 트랜잭션). 성공 경로는 누구나 짭니다. 이번 미션에서 여러분이 짜는 것은 나머지 전부입니다.`,
+    },
+    scenario: `커머스 플랫폼의 결제 모듈을 맡게 됐습니다. 지금 코드는 낙관주의자가 짰습니다 — 타임아웃이 나면 실패로 간주하고, 재시도는 매번 **새 참조번호로 새 요청**을 보냅니다. 그 결과 지난 분기 이중 결제가 7건, 그중 1건이 SNS에 캡처로 돌았습니다. CTO의 말이 요구사항의 전부를 요약합니다 — **"고객 카드에 같은 금액이 두 번 찍히면 그건 CS가 아니라 뉴스에 나옵니다."** PG사 API는 남의 시스템이라 못 고칩니다. 우리가 고칠 수 있는 것은 우리의 태도뿐입니다.`,
+    providedFiles: [
+      {
+        path: 'src/main/java/com/pgnet/PgResponse.java',
+        content: `package com.pgnet;
+
+/**
+ * PG사 응답 (PG사 SDK — 엔진입니다. 수정 금지, 그대로 사용).
+ * code 체계는 PG사 연동 문서 17페이지가 전부입니다:
+ *   "0000" 승인 / "1001" 한도초과 / "2002" 카드정지
+ *   "4004" 해당 거래 없음 / "5005" 이미 취소됨 / "9999" 알 수 없음(PG 내부 오류)
+ */
+public record PgResponse(String code, String message, int approvedAmountKrw) {
+}`,
+      },
+      {
+        path: 'src/main/java/com/pgnet/PgTimeoutException.java',
+        content: `package com.pgnet;
+
+/**
+ * 30초 내 응답 없음 (PG사 SDK — 엔진). 주의: 이 예외가 났어도
+ * 승인은 성사됐을 수 있습니다. PG사 기술지원 답변: "그럴 수 있죠."
+ */
+public class PgTimeoutException extends RuntimeException {
+
+    public PgTimeoutException(String message) {
+        super(message);
+    }
+}`,
+      },
+      {
+        path: 'src/main/java/com/pgnet/PgClient.java',
+        content: `package com.pgnet;
+
+import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * PG사 표준 클라이언트 v3.2 (PG사 SDK — 엔진입니다. 수정·재구현 금지, 그대로 사용).
+ *
+ * 문서 17페이지 하단, 작은 글씨: "동일한 merchantTxRef로 재요청 시
+ * 신규 승인 없이 최초 처리 결과를 반환합니다." — 이 한 줄이 이 SDK의
+ * 가장 중요한 문장이지만, 아무도 17페이지까지 읽지 않습니다.
+ *
+ * 학습용 시뮬레이션: cardToken이 "SLOW-"로 시작하면 승인은 기록되지만
+ * 응답 전에 PgTimeoutException이 발생합니다(응답이 길에서 사라진 상황).
+ */
+public class PgClient {
+
+    private final Map<String, PgResponse> processed = new HashMap<>();
+    private final Map<String, Integer> refunded = new HashMap<>();
+
+    /** 승인 요청. 같은 merchantTxRef는 최초 결과를 그대로 반환한다(문서 17p). */
+    public PgResponse approve(String merchantTxRef, int amountKrw, String cardToken) {
+        if (processed.containsKey(merchantTxRef)) {
+            return processed.get(merchantTxRef);
+        }
+        PgResponse r = new PgResponse("0000", "승인", amountKrw);
+        processed.put(merchantTxRef, r);
+        if (cardToken.startsWith("SLOW-")) {
+            throw new PgTimeoutException("응답 시간 초과 (승인 여부 알 수 없음)");
+        }
+        return r;
+    }
+
+    /** 거래 상태 조회. 모르는 참조번호는 "4004". */
+    public PgResponse inquire(String merchantTxRef) {
+        PgResponse r = processed.get(merchantTxRef);
+        if (r == null) {
+            return new PgResponse("4004", "해당 거래 없음", 0);
+        }
+        int back = refunded.getOrDefault(merchantTxRef, 0);
+        return new PgResponse(r.code(), r.message(), r.approvedAmountKrw() - back);
+    }
+
+    /** 취소(전액/부분). 승인된 거래만 가능, 이미 전액 취소면 "5005". */
+    public PgResponse cancel(String merchantTxRef, int amountKrw) {
+        PgResponse r = processed.get(merchantTxRef);
+        if (r == null || !r.code().equals("0000")) {
+            return new PgResponse("4004", "해당 거래 없음", 0);
+        }
+        int back = refunded.getOrDefault(merchantTxRef, 0);
+        if (back >= r.approvedAmountKrw()) {
+            return new PgResponse("5005", "이미 취소됨", 0);
+        }
+        refunded.put(merchantTxRef, back + amountKrw);
+        return new PgResponse("0000", "취소 완료", amountKrw);
+    }
+}`,
+      },
+    ],
+    legacyFiles: [
+      {
+        path: 'src/main/java/com/daehan/pay/PaymentService.java',
+        content: `package com.daehan.pay;
+
+import com.pgnet.PgClient;
+import com.pgnet.PgResponse;
+import com.pgnet.PgTimeoutException;
+
+// ------------------------------------------------------
+//  결제 서비스 v1.4
+//  20230811 재시도 3회 추가 (그날 장애 이후. 이걸로 해결됨 -- 김선임)
+//  20240302 타임아웃은 실패 처리 (고객 대기 못 시킴 -- 김선임)
+// ------------------------------------------------------
+public class PaymentService {
+
+    private final PgClient pg = new PgClient();
+
+    /** 주문 결제. 성공 시 "결제 완료", 실패 시 "결제 실패". */
+    public String pay(String orderId, int amountKrw, String cardToken) {
+        for (int attempt = 1; attempt <= 3; attempt++) {
+            String ref = "TX-" + System.nanoTime();   // 매번 새 참조번호. 겹칠 일 없음
+            try {
+                PgResponse r = pg.approve(ref, amountKrw, cardToken);
+                if (r.code().equals("0000")) {
+                    return "결제 완료";
+                }
+            } catch (PgTimeoutException e) {
+                // 타임아웃 = 실패로 간주하고 재시도 (20240302)
+            }
+        }
+        return "결제 실패";
+    }
+}`,
+      },
+    ],
+    requirements: [
+      '멱등성: 같은 주문의 결제 요청이 몇 번 반복돼도(재시도, 새로고침, 네트워크 재전송) 고객 카드에는 최대 한 번만 승인이 발생해야 합니다. 참조번호(merchantTxRef)를 매번 새로 만들지 말고 주문에서 결정적으로 유도해, 재시도가 "새 결제"가 아니라 "같은 결제의 재확인"이 되게 하세요. PG 문서 17페이지의 동일 참조번호 규칙이 여러분의 무기입니다.',
+      '검증 시나리오(멱등키 동작 표): 주문 ORD-1024, 39,800원, 카드 "SLOW-777". ① 1차 요청 → 타임아웃 ② 같은 참조번호로 상태 조회 → "0000" 승인 확인 ③ 결과: 결제 완료, 총 승인 1건 39,800원. 현재 레거시는 같은 상황에서 승인 2~3건(최대 119,400원)을 만듭니다 — 개선 전후의 이 차이를 테스트로 증명하세요.',
+      '타임아웃은 실패가 아닙니다: PgTimeoutException을 받으면 실패 단정 대신 상태 조회(inquire)로 확인하고, 조회로도 확인되지 않으면(예: "9999") 주문을 "확인 중(UNKNOWN)" 상태로 남기세요. 고객에게 실패를 안내했는데 돈이 나가 있는 것이 최악의 경로입니다.',
+      '보상 트랜잭션: 승인은 확인됐지만 주문을 확정할 수 없는 경우(재고 소진 등을 파라미터로 가정), cancel로 승인을 되돌리고 결과를 기록하세요. 보상마저 실패하면 예외를 삼키지 말고 "수동 대사 필요" 상태로 명시해 남깁니다.',
+      '결제는 명시적 상태 기계로 관리합니다: REQUESTED → APPROVED / FAILED / UNKNOWN, 이후 CONFIRMED / COMPENSATED / NEEDS_REVIEW. 어떤 입력 순서에서도 상태가 로그 문자열이 아니라 코드의 타입으로 존재해야 합니다.',
+      'CS팀 질문: "확인 중 상태는 언제까지 확인 중인가요?" (자동 재조회를 몇 번, 몇 초 간격으로 하고 그 후 누구의 몫이 되는지는 아직 정책이 없습니다)',
+    ],
+    constraints: [
+      'PgClient.java, PgResponse.java, PgTimeoutException.java는 PG사 SDK(엔진)입니다. 수정·재구현 금지, 그대로 사용하세요. PG사의 응답 코드 문자열이 결제 도메인 코드 곳곳에 새어 들지 않게 경계에서 번역하세요.',
+      '기존 공개 시그니처 pay(String, int, String)는 주문 모듈이 호출 중이므로 유지하세요. 내부는 새 구조에 위임해도 됩니다.',
+      '도메인 규칙: 승인 여부가 불명확한 거래를 실패로 단정해 고객에게 안내하는 것을 금지합니다. "모른다"는 상태로 남기고 확인 절차를 태웁니다.',
+      '외부 라이브러리 없이 순수 Java 17로 작성합니다.',
+    ],
+    learningGoals: [
+      '"모른다(UNKNOWN)"를 일급 상태로 설계에 편입하기 — 성공/실패 이분법이 만드는 사고의 구조 이해',
+      '멱등키로 재시도의 의미를 "새 요청"에서 "같은 질문의 반복"으로 바꾸는 경험',
+      '보상 트랜잭션과 수동 대사 큐 — 자동으로 되돌릴 수 있는 실패와 사람이 봐야 하는 실패의 구분',
+      '외부 SDK의 문자열 코드 체계를 경계에서 도메인 타입으로 번역해, 남의 시스템의 어휘가 내 도메인을 오염시키지 않게 하기',
+    ],
+    hints: [
+      '참조번호가 System.nanoTime()인 순간 모든 재시도는 새 결제가 됩니다. 참조번호를 orderId에서 결정적으로 만들면(예: "ORD-1024-PAY"), 문서 17페이지의 규칙 덕분에 PG사가 여러분 대신 중복을 막아 줍니다 — 멱등성의 절반은 이미 상대방에게 있습니다.',
+      '타임아웃 처리 순서를 종이에 먼저 그리세요: 타임아웃 → inquire → "0000"이면 승인으로 승격 / "4004"면 미도달이므로 같은 참조번호로 재시도 안전 / "9999"면 UNKNOWN으로 보류. 이 세 갈래가 코드에서 세 개의 이름 있는 경로로 보여야 합니다.',
+      '상태 전이는 enum과 전이 메서드로 못박고, 허용되지 않은 전이(FAILED → CONFIRMED 같은)는 예외로 막으세요. 상태 기계가 명시적이면 "부분 환불 후 재시도" 같은 궤도 밖 시나리오가 컴파일 타임과 테스트에서 걸립니다.',
+    ],
+    hiddenCases: [
+      {
+        title: '유령 결제 — 타임아웃 뒤의 승인',
+        description:
+          '타임아웃이 났지만 PG사에서는 승인이 성사된 경우("SLOW-" 카드가 재현합니다), 실패로 단정하고 끝내면 돈은 나갔는데 주문이 없는 유령 결제가 남습니다. 고객이 카드 명세서를 볼 때까지 아무도 모릅니다. 좋은 방어: 타임아웃 경로에서 반드시 같은 참조번호로 조회해 승인 여부를 확정하고, 확정 불가면 UNKNOWN으로 남겨 재확인 절차가 있음을 상태로 드러내세요.',
+      },
+      {
+        title: '멱등키 충돌',
+        description:
+          '참조번호를 주문에서 유도할 때 규칙이 엉성하면(예: 주문번호 뒷자리만 사용) 서로 다른 주문이 같은 키를 갖게 되고, 두 번째 주문의 결제 요청이 첫 주문의 승인 결과를 돌려받아 "결제 완료"로 위장됩니다 — 돈은 안 나갔는데 주문은 확정되는, 이중 결제의 거울상입니다. 좋은 방어: 키 유도 규칙에 주문 전체 식별자를 쓰고, 응답의 승인 금액이 이번 주문 금액과 일치하는지 교차 검증하세요.',
+      },
+      {
+        title: '부분 환불 뒤의 재시도',
+        description:
+          '부분 취소가 일어난 거래에 뒤늦은 재시도나 조회가 도착하면, 조회 응답의 코드는 여전히 "0000"이지만 남은 승인 금액은 원래와 다릅니다. 코드만 보고 "승인 완료 39,800원"으로 처리하면 장부와 PG 정산이 어긋납니다. 좋은 방어: 조회 결과를 해석할 때 코드와 금액을 함께 검증하고, 금액 불일치는 자동 처리하지 말고 "수동 대사 필요"로 승격시키세요.',
+      },
+    ],
+    rubric: [
+      {
+        name: '멱등성 설계',
+        description: '참조번호가 주문에서 결정적으로 유도되고, 반복 요청에서 승인이 최대 1건임이 테스트로 증명되는가.',
+        weight: 25,
+        visibleToLearner: true,
+      },
+      {
+        name: '불확실성(UNKNOWN)의 처리',
+        description: '타임아웃이 실패로 단정되지 않고 조회→확정/보류의 명시적 경로를 타는가. UNKNOWN이 상태 기계의 일급 상태인가.',
+        weight: 25,
+        visibleToLearner: true,
+      },
+      {
+        name: '보상과 상태 기계',
+        description: '보상 트랜잭션과 그 실패(수동 대사)가 설계되어 있는가. 상태 전이가 타입으로 강제되고 위반이 막히는가.',
+        weight: 20,
+        visibleToLearner: true,
+      },
+      {
+        name: '경계 격리와 테스트',
+        description: 'PG 응답 코드 문자열이 경계에서 도메인 타입으로 번역되는가. 핵심 시나리오(타임아웃 후 승인, 반복 요청)가 테스트로 고정되었는가.',
+        weight: 20,
+        visibleToLearner: true,
+      },
+      {
+        name: '모호한 요구사항 확인',
+        description: 'UNKNOWN의 재조회 정책 같은 미결정 사항을 임의 확정하지 않고 질문했거나 가정을 명시했는가.',
+        weight: 10,
+        visibleToLearner: false,
+      },
+    ],
+    explainTask: {
+      audience: '이중 결제 캡처 사태 이후 결제팀을 불신하는 CS팀장 (비개발자, 환불 처리의 달인)',
+      prompt:
+        'CS팀장에게 개선 내용을 설명하세요. (1) 왜 이중 결제가 났었는지 — "응답이 없으면 다시 보낸다"가 왜 위험한지를 택배 재발송에 빗대어, (2) 이제는 무엇이 다른지 — 같은 주문은 같은 번호로만 묻기 때문에 카드에 두 번 찍히는 일이 구조적으로 불가능하다는 것, (3) 새로 생기는 "확인 중" 상태가 CS 화면에서 무엇을 의미하고, 어떤 경우에 CS가 개입하게 되는지(수동 대사). 마지막으로 "결제 실패"와 "확인 중"을 고객에게 다르게 안내해야 하는 이유를 한 문장으로 정리하세요.',
+    },
+    endings: [
+      {
+        grade: 'calm',
+        title: '뉴스에 나오지 않는 결제',
+        teaser: '분기 이중 결제 0건. 타임아웃은 여전히 매일 발생하지만, 전부 확인 절차를 타고 조용히 완료되거나 조용히 되돌려진다. CS팀장이 회식에서 결제팀 옆에 앉는다.',
+      },
+      {
+        grade: 'hotfix',
+        title: '수동 대사의 아침',
+        teaser: '이중 결제는 사라졌다. 다만 UNKNOWN이 쌓이는 속도가 처리 속도보다 빨라, 매주 월요일 아침 수동 대사 목록을 내려받는 일이 당신의 루틴이 된다.',
+      },
+      {
+        grade: 'dawn',
+        title: '캡처 2탄',
+        teaser: '금액 검증 없는 멱등키가 다른 주문의 승인을 물고 들어온 밤, "결제도 안 했는데 주문 완료"라는 캡처가 다시 돈다. 이번 뉴스의 헤드라인에는 재발이라는 단어가 붙는다.',
+      },
+      {
+        grade: 'hidden',
+        title: '???',
+        teaser: '이 결말의 승인 코드는 아직 발급되지 않았습니다. 조건은 비공개입니다.',
+      },
+    ],
+  },
+
+  // =========================================================================
+  // Mission 20 — Stage 9 "동시성의 감각" / 공연 티켓팅 / 리팩토링
+  // =========================================================================
+  {
+    id: 's9-ticketing-01',
+    stage: 9,
+    stageTitle: '동시성의 감각',
+    missionType: '리팩토링',
+    difficulty: 'Hard',
+    scope: '여러 파일',
+    modes: ['developer'],
+    domain: '공연 티켓팅',
+    domainEmoji: '🎤',
+    title: '0.3초의 전쟁 — 같은 좌석이 두 번 팔리는 코드',
+    estimatedMinutes: 150,
+    briefing: {
+      title: '두 손이 동시에 같은 좌석을 잡을 때',
+      content: `### 매진까지 0.3초
+
+인기 아이돌 콘서트의 티켓 오픈. 수십만 명이 같은 초에 접속해 몇천 개의 좌석을 두고 경쟁합니다. 수강신청, 명절 기차표와 함께 한국 인터넷의 3대 전쟁으로 불리는 이 순간, 서버 안에서는 더 미시적인 전쟁이 벌어집니다 — 두 요청이 **같은 좌석을 두고 몇 마이크로초 차이로** 도착하는 전쟁.
+
+### 확인과 행동 사이의 틈
+
+문제의 코드는 어디서나 같은 모양입니다. "좌석이 비었는지 확인한다(check) → 비었으면 배정한다(act)". 단일 사용자 세계에서는 완벽한 논리지만, 확인과 행동 사이에는 아무리 짧아도 시간의 틈이 있습니다. 그 틈에 다른 요청이 끼어들면 — 두 요청 모두 "비었음"을 보고, 두 요청 모두 배정에 성공합니다. 같은 좌석의 티켓 두 장. 이 패턴에는 이름이 있습니다: **check-then-act 경쟁 상태**. 그리고 그 틈의 폭을 레이스 윈도(race window)라 부릅니다.
+
+### 공유된 가변 상태 — 모든 악의 근원
+
+《자바 병렬 프로그래밍》(JCiP)이 한 문장으로 요약하는 진단: 동시성 버그의 근원은 스레드가 아니라 **여럿이 동시에 읽고 쓰는 변경 가능한 상태**다. 좌석 맵이 공유되고, 누구나 확인하고 쓸 수 있는 한, 틈은 반드시 착취당합니다. 더 고약한 것은 이 버그의 성질입니다 — 동시성 버그는 재현되지 않습니다, 목격될 뿐. 테스트 환경에서는 천 번을 돌려도 멀쩡하다가 티켓 오픈 날에만 나타납니다. 그래서 이 스테이지의 훈련은 실행이 아니라 **읽기**입니다. 코드를 두 사람의 눈으로 동시에 읽으며, 틈이 있는 줄을 찾아내는 것.`,
+    },
+    scenario: `공연 예매 스타트업 '겟티켓'의 좌석 선점 코드를 인수인계받았습니다. 증상은 명확합니다 — **같은 좌석 티켓이 두 장 발권되는 사고가 공연마다 3~4건.** 공연장에서 두 관객이 한 좌석 앞에 서고, 현장 스태프가 사과하며 스탠딩석 팔찌를 채워 줍니다. 개발팀 노트북에서는 천 번을 돌려도 재현되지 않습니다. 실행으로 잡을 수 없으니, 이번 미션은 코드를 읽어 레이스를 찾아 표시하고, 틈 자체가 존재하지 않는 구조로 바꾸는 것입니다. 티켓 오픈은 다음 달, 이번엔 돔 공연입니다.`,
+    providedFiles: [
+      {
+        path: 'src/main/java/com/venue/VenueChart.java',
+        content: `package com.venue;
+
+import java.util.List;
+
+/**
+ * 좌석 배치도 제공 (공연기획사 시스템 — 엔진입니다. 수정 금지, 그대로 사용).
+ * 공연별 판매 대상 좌석 ID 목록을 내려 준다. 판매 상태와는 무관한 정적 데이터.
+ */
+public class VenueChart {
+
+    /** 판매 대상 좌석 ID 목록 (사전순). */
+    public List<String> sellableSeats(String showId) {
+        return List.of("A-01", "A-02", "A-03", "B-01", "B-02");
+    }
+}`,
+      },
+    ],
+    legacyFiles: [
+      {
+        path: 'src/main/java/com/getticket/SeatMap.java',
+        content: `package com.getticket;
+
+import java.util.HashMap;
+import java.util.Map;
+
+// ------------------------------------------------------
+//  좌석 상태 보관 v1.0
+//  주의: 선점 서비스와 정산 배치가 이 맵을 직접 읽고 씁니다.
+// ------------------------------------------------------
+public class SeatMap {
+
+    // seatId -> userId. 값이 없으면 빈 좌석.
+    public static final Map<String, String> SEATS = new HashMap<>();
+
+    // 통계용 판매 카운터 (대시보드가 10초마다 읽어 감)
+    public static int soldCount = 0;
+}`,
+      },
+      {
+        path: 'src/main/java/com/getticket/ReserveService.java',
+        content: `package com.getticket;
+
+// ------------------------------------------------------
+//  좌석 선점 서비스 v2.3
+//  20240117 중복 발권 제보로 확인 로직 추가 (확인하고 배정하니까 안전함 -- 박선임)
+// ------------------------------------------------------
+public class ReserveService {
+
+    /** 좌석 선점. 성공 시 "선점 완료", 이미 팔렸으면 "이미 선점된 좌석". */
+    public String reserve(String seatId, String userId) {
+        String owner = SeatMap.SEATS.get(seatId);          // (1) 확인
+        if (owner == null) {
+            SeatMap.SEATS.put(seatId, userId);             // (2) 배정
+            SeatMap.soldCount = SeatMap.soldCount + 1;     // (3) 통계
+            return "선점 완료 " + seatId;
+        }
+        if (owner.equals(userId)) {
+            return "선점 완료 " + seatId;                  // 같은 사람이면 통과 (20240117)
+        }
+        return "이미 선점된 좌석";
+    }
+
+    /** 선점 취소. 결제 이탈 시 CS가 수동 호출한다. 자동 만료는 없음(TODO 3년째). */
+    public String cancel(String seatId, String userId) {
+        String owner = SeatMap.SEATS.get(seatId);
+        if (owner != null && owner.equals(userId)) {
+            SeatMap.SEATS.remove(seatId);
+            SeatMap.soldCount = SeatMap.soldCount - 1;
+            return "선점 해제 " + seatId;
+        }
+        return "해제 대상 아님";
+    }
+}`,
+      },
+      {
+        path: 'src/main/java/com/getticket/TicketOps.java',
+        content: `package com.getticket;
+
+/** 운영 점검 콘솔. 단일 흐름 점검용 — 여기서는 아무 문제가 없어 보인다. */
+public class TicketOps {
+
+    public static void main(String[] args) {
+        ReserveService svc = new ReserveService();
+        System.out.println(svc.reserve("A-01", "user-kim"));
+        System.out.println(svc.reserve("A-01", "user-lee"));
+        System.out.println(svc.cancel("A-01", "user-kim"));
+        System.out.println(svc.reserve("A-01", "user-lee"));
+        // 기대 출력:
+        // 선점 완료 A-01
+        // 이미 선점된 좌석
+        // 선점 해제 A-01
+        // 선점 완료 A-01
+    }
+}`,
+      },
+    ],
+    requirements: [
+      '레이스 읽기(제출물의 일부): 레거시에서 두 요청이 동시에 들어왔을 때 잘못된 결과가 나는 지점을 전부 찾아, 해당 줄에 "// RACE:" 주석으로 어떤 인터리빙에서 무엇이 깨지는지 표시하세요. 최소 세 곳입니다 — 확인과 배정 사이, 통계 카운터의 갱신, 취소와 선점의 교차.',
+      '검증 시나리오(인터리빙 표): 두 사용자 kim과 lee가 A-01에 동시 요청. T1(kim): 확인 → 비었음 / T2(lee): 확인 → 비었음 / T1: 배정 성공 / T2: 배정 성공(kim을 덮어씀) → 티켓 두 장, 좌석 주인은 lee, soldCount는 2. 개선 후에는 같은 인터리빙에서 정확히 한 명만 "선점 완료"를 받아야 하고, 이를 판단 근거와 함께 리뷰 노트로 설명해야 합니다.',
+      '원자적 선점: "확인"과 "배정"이 분리된 두 걸음이 아니라 한 걸음이어야 합니다 (예: putIfAbsent 같은 원자적 넣기, 명시적 잠금 범위). 어떤 방식을 고르든 "틈이 왜 사라지는지"를 주석으로 설명하세요.',
+      '홀드와 만료: 선점 후 일정 시간 안에 결제가 없으면 좌석이 자동으로 풀려야 합니다. 시간은 시스템 시계 직접 호출이 아니라 주입받은 시계로 다뤄, 만료 로직이 테스트에서 시간을 돌려 가며 검증 가능해야 합니다.',
+      '공유 상태 봉인: public static 맵과 카운터가 외부에 직접 노출되지 않아야 합니다. 단일 흐름 점검(TicketOps)의 기대 출력 4줄은 개선 후에도 동일해야 합니다.',
+      '운영팀 전달: "홀드는 적당히 짧게 해 주세요. 너무 길면 암표상이 좌석을 잠가요." (몇 분이 적당한지는 공연마다 다르다는 답만 돌아왔습니다)',
+    ],
+    constraints: [
+      'VenueChart.java는 엔진 코드입니다. 수정·재구현 금지, 그대로 사용하세요.',
+      '실행 환경에서 멀티스레드 재현 테스트는 요구하지 않습니다 — 이 미션의 검증은 정적 읽기입니다. 다만 단일 흐름 동작(기대 출력 4줄)과 만료 로직은 테스트로 고정하세요.',
+      '도메인 규칙: 좌석의 상태는 빈 좌석 → 홀드(사용자, 만료시각) → 확정 세 가지뿐이며, 상태와 전이가 코드의 타입으로 드러나야 합니다.',
+      '외부 라이브러리 없이 순수 Java 17로 작성합니다. java.util.concurrent는 표준 라이브러리입니다 — 마음껏 쓰세요.',
+    ],
+    learningGoals: [
+      'check-then-act 패턴을 코드에서 식별하고, 레이스 윈도가 어느 두 줄 사이에 있는지 짚어 내는 읽기 능력',
+      '공유된 가변 상태를 봉인하고, 확인-행동을 원자적 연산 하나로 접는 구조 감각',
+      '"재현되지 않는 버그"를 실행이 아니라 추론으로 다루는 훈련 — 인터리빙 표로 사고하기',
+      '홀드·만료처럼 시간이 개입하는 동시성 규칙에서 시계를 주입해 검증 가능성을 확보하기 (S3의 복습)',
+    ],
+    hints: [
+      '레이스를 찾는 요령: 상태를 읽는 줄과 그 결과로 상태를 쓰는 줄 사이에 손가락을 끼워 보세요. 그 틈에 다른 사용자의 같은 코드가 통째로 실행된다고 상상하는 것 — 그것이 인터리빙 읽기입니다. soldCount = soldCount + 1도 읽기와 쓰기 두 걸음이라는 것을 잊지 마세요.',
+      '원자적 선점의 핵심은 "비었으면 넣기"를 맵에게 한 번에 시키는 것입니다. ConcurrentHashMap.putIfAbsent(seatId, hold)는 넣기에 성공한 딱 한 명에게만 null을 돌려줍니다 — 성공 판정을 반환값으로 하면 확인 단계 자체가 사라집니다.',
+      '만료를 "백그라운드가 청소"로 설계하면 결제 완료와 만료 해제가 또 다른 레이스를 만듭니다. 대신 좌석을 잡으려는 쪽이 기존 홀드의 만료 여부를 원자적 교체(replace) 조건으로 확인하게 하면, 청소부 없이도 만료가 동작하고 경쟁 지점이 한 곳으로 모입니다.',
+    ],
+    hiddenCases: [
+      {
+        title: '만료 직전의 결제 완료',
+        description:
+          '홀드 만료 시각과 결제 완료가 같은 순간에 교차하면 — 결제는 성공했는데 좌석은 만료로 풀려 다른 사람에게 팔릴 수 있습니다. 돈을 낸 두 사람이 한 좌석을 갖는 최악의 조합입니다. 좋은 방어: 결제 확정을 "홀드가 아직 유효할 때만 성공하는" 원자적 상태 전이로 만들고, 전이에 실패한 결제는 자동 환불 경로로 명시해 보내세요.',
+      },
+      {
+        title: '자기 자신과의 레이스',
+        description:
+          '티켓팅의 국민 행동, 더블클릭. 같은 사용자의 요청 두 개가 동시에 들어오면 "같은 사람이면 통과" 로직이 두 요청 모두에 성공을 돌려주고, 결제 페이지가 두 개 열려 이중 결제로 이어질 수 있습니다. 좋은 방어: 선점을 사용자 기준으로 멱등하게 — 같은 사용자의 중복 선점은 새 홀드가 아니라 기존 홀드를 돌려주게 하세요. S8에서 배운 멱등성이 동시성에서도 무기가 됩니다.',
+      },
+      {
+        title: '취소와 선점의 교차',
+        description:
+          'kim의 취소와 lee의 선점이 겹치면 — lee가 "이미 선점됨"을 확인한 직후 kim이 취소해, 빈 좌석인데 아무도 못 사는 상태가 되거나, 반대로 취소의 remove와 선점의 put이 꼬여 soldCount가 실제 판매 좌석 수와 어긋납니다. 대시보드가 틀린 매진율을 보여 주는 원인입니다. 좋은 방어: 취소도 "내 홀드일 때만 성공하는" 원자적 조건부 제거로 만들고, 카운터는 별도 변수가 아니라 좌석 상태에서 파생시키세요.',
+      },
+    ],
+    rubric: [
+      {
+        name: '레이스 식별 (읽기)',
+        description: 'check-then-act, 카운터 갱신, 취소 교차의 세 지점이 RACE 주석으로 정확히 짚였고, 각 인터리빙 설명이 타당한가.',
+        weight: 25,
+        visibleToLearner: true,
+      },
+      {
+        name: '원자적 선점 구조',
+        description: '확인과 배정이 원자적 연산 하나로 접혔는가. 성공 판정이 반환값/전이 결과로 이루어지는가. 틈이 사라진 이유가 설명되었는가.',
+        weight: 25,
+        visibleToLearner: true,
+      },
+      {
+        name: '홀드·만료 설계',
+        description: '홀드 상태와 만료가 타입으로 표현되고, 시계 주입으로 테스트 가능한가. 만료가 새 레이스를 만들지 않는가.',
+        weight: 20,
+        visibleToLearner: true,
+      },
+      {
+        name: '공유 상태 봉인과 동작 보존',
+        description: 'public static 노출이 제거되고 상태 접근이 한 경로로 모였는가. 단일 흐름 기대 출력이 보존되는가.',
+        weight: 20,
+        visibleToLearner: true,
+      },
+      {
+        name: '모호한 요구사항 확인',
+        description: '홀드 시간의 기준을 임의 확정하지 않고 질문했거나 설정 주입으로 열어 두고 가정을 명시했는가.',
+        weight: 10,
+        visibleToLearner: false,
+      },
+    ],
+    explainTask: {
+      audience: '공연장에서 중복 좌석 사과를 도맡아 온 현장 운영 매니저 (비개발자)',
+      prompt:
+        '운영 매니저에게 설명하세요. (1) 같은 좌석 티켓 두 장이 어떻게 만들어졌는지 — "확인하고 배정하는 사이의 찰나"를 두 명이 동시에 한 좌석을 가리키는 현장 상황에 빗대어, (2) 왜 사무실에서는 재현이 안 됐는지 — 이 버그는 손님이 몰릴 때만 나타난다는 것, (3) 개선 후에는 무엇이 달라지는지 — 이제 좌석을 잡는 행위 자체가 한 명만 통과시키는 개찰구가 됐다는 것, 그리고 홀드 만료로 결제 이탈 좌석이 자동으로 풀린다는 것. 다음 공연 오픈 날 매니저가 무전기 대신 무엇을 보면 되는지로 마무리하세요.',
+    },
+    endings: [
+      {
+        grade: 'calm',
+        title: '무전기가 조용한 오픈',
+        teaser: '돔 공연 티켓 오픈, 3분 매진. 현장 중복 좌석 0건. 운영 매니저의 무전기는 그날 처음으로 스탠딩 안내에만 쓰인다.',
+      },
+      {
+        grade: 'hotfix',
+        title: '월요일의 카운터 보정',
+        teaser: '중복 발권은 사라졌다. 다만 대시보드의 매진율이 가끔 실제와 어긋나, 매주 월요일 카운터를 손으로 다시 세는 배치가 하나 늘었다.',
+      },
+      {
+        grade: 'dawn',
+        title: '한 좌석 앞의 두 사람',
+        teaser: '만료와 결제가 교차한 좌석이 두 번 팔리고, 공연 당일 그 자리 앞에서 두 관객이 각자의 QR을 내민다. 사과문의 초안을 쓰는 것은 이번에도 현장이지만, 원인 보고서는 당신 몫이다.',
+      },
+      {
+        grade: 'hidden',
+        title: '???',
+        teaser: '이 결말의 좌석은 아직 아무도 선점하지 못했습니다. 조건은 비공개입니다.',
+      },
+    ],
+  },
+
+  // =========================================================================
+  // Mission 21 — Stage 10 "데이터가 흐르는 길" / 커머스 재고 / 리팩토링
+  // =========================================================================
+  {
+    id: 's10-stock-01',
+    stage: 10,
+    stageTitle: '데이터가 흐르는 길',
+    missionType: '리팩토링',
+    difficulty: 'Normal',
+    scope: '모듈 경계',
+    modes: ['developer'],
+    domain: '커머스 · 재고',
+    domainEmoji: '🛒',
+    title: '재고가 세 곳에 사는 집 — 진실과 사본의 재설계',
+    estimatedMinutes: 150,
+    briefing: {
+      title: '캐시는 전부 파생 데이터다',
+      content: `### 같은 질문, 세 개의 대답
+
+"이 티셔츠, 지금 살 수 있나요?" — 이 질문에 커머스 시스템은 세 곳에서 대답합니다. 주문을 처리하는 재고 원장, 상품 페이지가 읽는 캐시, 그리고 검색 결과의 품절 배지. 셋이 같은 값을 보여 주는 동안은 아무도 이 구조를 의식하지 않습니다. 문제는 셋이 **각자 갱신될 때** 시작됩니다 — 주문 코드가 원장을 고치고, 캐시를 고치고, 검색 인덱스를 고치는 세 번의 쓰기(double write) 중 하나가 실패하거나 순서가 뒤집히는 순간, 검색에는 "판매중"인데 주문은 "품절"인 상품이 태어납니다.
+
+### 진실은 하나, 나머지는 파생
+
+마틴 클레프만의 《데이터 중심 애플리케이션 설계》가 이 혼돈에 준 정리는 단순합니다. **캐시와 인덱스는 전부 파생 데이터(derived data)다.** 스스로 진실을 주장할 자격이 없고, 하나의 기록 시스템(system of record)으로부터 다시 계산될 수 있어야 합니다. 그리고 파생을 만드는 가장 믿을 만한 길은 "여기저기서 각자 쓰기"가 아니라, 진실에 일어난 변화를 **순서 있는 이벤트의 흐름**으로 흘려보내고 각 사본이 그 흐름을 따라가게 하는 것입니다. 시베리아 횡단철도 미션에서 시간의 기준이 하나였듯, 재고의 기준도 하나여야 합니다 — 나머지는 전부 그 기준의 그림자입니다.
+
+### 늦는 것과 틀린 것
+
+사본은 진실보다 늦을 수 있습니다. 그것은 설계된 성질입니다(최종 일관성). 위험한 것은 늦는 사본이 아니라, **틀린 채로 영영 머무는 사본**입니다 — 이벤트를 놓치고도 따라잡을 방법이 없는 캐시, 순서가 뒤집힌 채 적용된 인덱스. 이번 미션에서 여러분이 만드는 것은 빠른 시스템이 아니라, 틀렸을 때 스스로 바로잡을 수 있는 시스템입니다.`,
+    },
+    scenario: `중견 커머스 '다올몰'의 재고 표시 사고를 인수인계받았습니다. 증상: **"검색에는 판매중인데 들어가면 품절", "품절 표시인데 주문이 됨"** — 이런 CS가 주당 40건. 원인은 코드에 있습니다. 주문 서비스가 재고 원장·상품 캐시·검색 인덱스를 **직접, 제각각, 서로 다른 순서로** 갱신하고, 취소 경로는 아예 인덱스 갱신을 빼먹습니다(주석에는 "TODO 검색팀 API 자리"가 3년째). 마침 전사 이벤트 로그 인프라가 도입됐습니다. 이제 진실을 한 곳에 모으고, 나머지가 그 흐름을 따라가게 만들 차례입니다.`,
+    providedFiles: [
+      {
+        path: 'src/main/java/com/daol/infra/EventLog.java',
+        content: `package com.daol.infra;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Consumer;
+
+/**
+ * 사내 이벤트 로그 (인프라팀 제공 — 엔진입니다. 수정/재구현 금지, 그대로 사용).
+ * append-only. 이벤트마다 전역 순번(seq)이 붙고, 구독자에게 순서대로 전달된다.
+ * 구독자가 죽었다 살아나면 replayFrom(seq)으로 놓친 구간을 다시 받을 수 있다.
+ */
+public class EventLog {
+
+    /** 이벤트 한 건. */
+    public record Event(long seq, String type, String sku, int delta) {
+    }
+
+    private final List<Event> log = new ArrayList<>();
+    private final List<Consumer<Event>> subscribers = new ArrayList<>();
+    private long seq = 0;
+
+    /** 이벤트를 기록하고 구독자들에게 전달한다. 부여된 순번을 돌려준다. */
+    public long append(String type, String sku, int delta) {
+        seq++;
+        Event e = new Event(seq, type, sku, delta);
+        log.add(e);
+        for (Consumer<Event> sub : subscribers) {
+            sub.accept(e);
+        }
+        return seq;
+    }
+
+    public void subscribe(Consumer<Event> listener) {
+        subscribers.add(listener);
+    }
+
+    /** fromSeq 이후(미포함)의 이벤트를 순서대로 돌려준다. */
+    public List<Event> replayFrom(long fromSeq) {
+        return log.stream().filter(e -> e.seq() > fromSeq).toList();
+    }
+}`,
+      },
+    ],
+    legacyFiles: [
+      {
+        path: 'src/main/java/com/daol/stock/StockLedger.java',
+        content: `package com.daol.stock;
+
+import java.util.HashMap;
+import java.util.Map;
+
+/** 재고 원장. 주문 처리의 기준값 — 이라고는 하는데, 아래 둘도 각자 재고를 안다. */
+public class StockLedger {
+
+    public static final Map<String, Integer> QTY = new HashMap<>();
+
+    static {
+        QTY.put("TS-001", 10);   // 반팔 티셔츠
+        QTY.put("MUG-002", 1);   // 머그컵 (마지막 1개)
+    }
+}`,
+      },
+      {
+        path: 'src/main/java/com/daol/page/PageCache.java',
+        content: `package com.daol.page;
+
+import java.util.HashMap;
+import java.util.Map;
+
+/** 상품 페이지 캐시. 주문 서비스가 직접 고쳐 준다. */
+public class PageCache {
+
+    public static final Map<String, Integer> DISPLAY_QTY = new HashMap<>();
+
+    static {
+        DISPLAY_QTY.put("TS-001", 10);
+        DISPLAY_QTY.put("MUG-002", 1);
+    }
+}`,
+      },
+      {
+        path: 'src/main/java/com/daol/search/SearchIndex.java',
+        content: `package com.daol.search;
+
+import java.util.HashMap;
+import java.util.Map;
+
+/** 검색 인덱스의 판매 상태. 역시 주문 서비스가 직접 고쳐 준다. */
+public class SearchIndex {
+
+    public static final Map<String, String> BADGE = new HashMap<>();
+
+    static {
+        BADGE.put("TS-001", "판매중");
+        BADGE.put("MUG-002", "판매중");
+    }
+}`,
+      },
+      {
+        path: 'src/main/java/com/daol/order/OrderService.java',
+        content: `package com.daol.order;
+
+import com.daol.page.PageCache;
+import com.daol.search.SearchIndex;
+import com.daol.stock.StockLedger;
+
+// ------------------------------------------------------
+//  주문 서비스 v3.1 — 세 저장소를 손수 맞춰 준다 (언젠가는 어긋난다)
+// ------------------------------------------------------
+public class OrderService {
+
+    /** 주문 1건. 세 곳을 제각각 갱신한다. */
+    public String placeOrder(String sku) {
+        int qty = StockLedger.QTY.get(sku);
+        if (qty <= 0) {
+            return "품절";
+        }
+        StockLedger.QTY.put(sku, qty - 1);
+        PageCache.DISPLAY_QTY.put(sku, qty - 1);
+        if (qty - 1 <= 0) {
+            SearchIndex.BADGE.put(sku, "품절");
+        }
+        return "주문 완료 " + sku;
+    }
+
+    /** 주문 취소. 인덱스 갱신이 없다 — "TODO 검색팀 API 자리" (2023.05, 아직 그대로) */
+    public String cancelOrder(String sku) {
+        int qty = StockLedger.QTY.get(sku);
+        StockLedger.QTY.put(sku, qty + 1);
+        PageCache.DISPLAY_QTY.put(sku, qty + 1);
+        // TODO 검색팀 API 자리
+        return "취소 완료 " + sku;
+    }
+}`,
+      },
+      {
+        path: 'src/main/java/com/daol/StoreOps.java',
+        content: `package com.daol;
+
+import com.daol.order.OrderService;
+import com.daol.page.PageCache;
+import com.daol.search.SearchIndex;
+import com.daol.stock.StockLedger;
+
+/** 운영 점검 콘솔. 아침 점검 때 실행한다. */
+public class StoreOps {
+
+    public static void main(String[] args) {
+        OrderService svc = new OrderService();
+        svc.placeOrder("TS-001");
+        svc.placeOrder("TS-001");
+        svc.placeOrder("TS-001");
+        svc.cancelOrder("TS-001");
+        svc.placeOrder("MUG-002");
+
+        System.out.println("TS-001 원장 " + StockLedger.QTY.get("TS-001")
+                + " / 캐시 " + PageCache.DISPLAY_QTY.get("TS-001")
+                + " / 배지 " + SearchIndex.BADGE.get("TS-001"));
+        System.out.println("MUG-002 원장 " + StockLedger.QTY.get("MUG-002")
+                + " / 캐시 " + PageCache.DISPLAY_QTY.get("MUG-002")
+                + " / 배지 " + SearchIndex.BADGE.get("MUG-002"));
+        // 기대 출력 (동작 보존 기준):
+        // TS-001 원장 8 / 캐시 8 / 배지 판매중
+        // MUG-002 원장 0 / 캐시 0 / 배지 품절
+    }
+}`,
+      },
+    ],
+    requirements: [
+      '진실의 단일 출처: 재고의 증감은 오직 재고 원장에서만 일어납니다. 주문·취소 코드가 캐시와 검색 인덱스를 직접 쓰는 줄은 전부 사라져야 합니다.',
+      '파생 데이터의 갱신은 이벤트로: 원장의 변화를 EventLog에 기록하고(placed/canceled, sku, 증감), 캐시와 인덱스는 각자 구독자로서 이벤트를 순번(seq) 순서대로 적용해 자기 값을 파생시킵니다. 취소 경로의 3년 묵은 TODO도 이 구조에서는 저절로 사라져야 합니다 — 인덱스가 이벤트를 구독하는 한, 어떤 경로도 인덱스를 잊을 수 없습니다.',
+      '동작 보존: 아침 점검(StoreOps)의 기대 출력 2줄 — TS-001 원장 8/캐시 8/배지 판매중, MUG-002 원장 0/캐시 0/배지 품절 — 은 개편 후에도 동일해야 합니다. 수정 전에 테스트로 고정하세요.',
+      '사본은 늦을 수 있으나 틀린 채 머물면 안 됩니다: 구독자가 이벤트를 놓친 상황(구독 일시 중단을 테스트로 재현)에서, 마지막으로 적용한 순번을 기억했다가 replayFrom으로 따라잡는 재동기화 경로가 있어야 합니다. 따라잡은 뒤의 값은 원장에서 다시 계산한 값과 일치해야 합니다.',
+      '모듈 경계: 캐시·인덱스 모듈이 원장의 내부 Map을 직접 읽지 않아야 하며, 세 모듈은 이벤트와 조회 계약으로만 연결됩니다.',
+      '기획팀 요청: "검색 결과의 재고 표시는 실시간이면 좋겠어요." (몇 초까지의 지연이 허용되는지, SLA 숫자는 아직 아무도 정해 주지 않았습니다)',
+    ],
+    constraints: [
+      'EventLog.java는 엔진 코드입니다. 수정·재구현 금지, 그대로 사용하세요.',
+      '도메인 규칙: 파생 저장소(캐시·인덱스)는 언제든 버리고 원장에서 재구축할 수 있어야 합니다 — 재구축 경로가 코드로 존재해야 합니다.',
+      '이벤트에는 순번이 있습니다. 순번을 무시하고 적용하는 구독자는 이 미션에서 버그로 간주합니다.',
+      '외부 라이브러리 없이 순수 Java 17로 작성합니다.',
+    ],
+    learningGoals: [
+      '기록 시스템(진실)과 파생 데이터(캐시·인덱스)의 구분 — 더블 라이트가 왜 반드시 어긋나는지 체감',
+      '순서 있는 이벤트 스트림으로 사본을 갱신하는 구조와, 순번이 곧 정합성의 화폐라는 감각',
+      '최종 일관성을 비즈니스 언어로 다루기 — "늦어도 되는 것"과 "틀리면 안 되는 것"의 경계 긋기',
+      '유실·중복·역전이라는 스트림의 3대 사고에 대한 방어(순번 검증, 재동기화, 멱등 적용) 설계',
+    ],
+    hints: [
+      '개편의 첫 커밋은 이벤트 발행이 아니라 점검 출력의 테스트화입니다. 그물을 먼저 치고, 그다음 placeOrder에서 캐시·인덱스 쓰기를 지우는 대신 원장 갱신 + 이벤트 발행 한 쌍으로 바꾸세요. 구독자를 하나씩 붙일 때마다 테스트가 초록인지 확인하며 갑니다.',
+      '각 구독자에게 "마지막으로 적용한 seq"를 기억시키세요. 새 이벤트의 seq가 기대값(마지막+1)보다 크면 구멍이 난 것이고 — 그때가 replayFrom을 부를 순간입니다. 같거나 작으면 이미 본 이벤트이니 버립니다(멱등 적용). 이 두 줄이 유실과 중복을 동시에 막습니다.',
+      '품절 배지는 이벤트의 delta가 아니라 파생된 수량에서 계산하세요("수량 0 이하 = 품절"). 배지를 이벤트 종류에서 직접 만들면 취소 이벤트마다 배지 규칙이 흩어지고, 수량에서 파생시키면 규칙이 한 곳에 삽니다.',
+    ],
+    hiddenCases: [
+      {
+        title: '순서가 뒤집힌 이벤트',
+        description:
+          '재시도나 네트워크 사정으로 취소(+1)가 주문(-1)보다 먼저 도착하는 일은 분산 환경의 일상입니다. 순번 없이 도착 순서대로 적용하는 캐시는 중간 순간에 재고를 실제보다 크게 보여 주고, 그 순간의 화면을 믿고 주문한 고객이 품절 CS가 됩니다. 좋은 방어: 적용 전에 순번을 검증해 기대 순번이 아니면 보류(버퍼)하거나 재동기화를 트리거하세요. 도착 순서는 사실이 아니고, 순번이 사실입니다.',
+      },
+      {
+        title: '이벤트를 놓친 구독자',
+        description:
+          '검색 인덱스 프로세스가 재배포로 30초 죽어 있는 동안 흘러간 이벤트는 영영 돌아오지 않습니다 — 재동기화 경로가 없다면. 놓친 줄도 모르는 사본은 "틀린 채 머무는 사본"의 교과서입니다. 좋은 방어: 구독 재개 시 마지막 적용 순번부터 replayFrom으로 따라잡는 절차를 코드로 두고, 따라잡기 완료 전에는 자신의 값에 "동기화 중" 표시를 붙여 소비자가 신선도를 알게 하세요.',
+      },
+      {
+        title: '음수 재고를 표시하는 캐시',
+        description:
+          '중복 적용이나 역전이 겹치면 캐시 수량이 -1이 될 수 있습니다. 상품 페이지에 "-1개 남음"이 뜨는 것은 웃기지만, 그 캐시로 구매 가능 판단을 하는 코드가 있다면 웃을 수 없습니다. 좋은 방어: 파생 값에 불변식(수량 ≥ 0)을 걸되, 위반 시 0으로 조용히 보정하지 말고 재동기화를 트리거하며 기록을 남기세요. 불변식 위반은 표시 문제가 아니라 파이프라인 사고의 증상입니다.',
+      },
+    ],
+    rubric: [
+      {
+        name: '단일 진실 출처 구조',
+        description: '재고 증감이 원장 한 곳으로 모이고, 파생 저장소 직접 쓰기(더블 라이트)가 완전히 제거되었는가. 재구축 경로가 존재하는가.',
+        weight: 30,
+        visibleToLearner: true,
+      },
+      {
+        name: '이벤트 기반 파생 갱신',
+        description: '구독자가 순번을 검증하며 멱등하게 적용하는가. 놓친 구간의 재동기화(replayFrom)가 동작하는가.',
+        weight: 25,
+        visibleToLearner: true,
+      },
+      {
+        name: '동작 보존',
+        description: '아침 점검의 기대 출력 2줄이 개편 전후로 동일한가. 이를 테스트로 먼저 고정했는가.',
+        weight: 20,
+        visibleToLearner: true,
+      },
+      {
+        name: '모듈 경계',
+        description: '캐시·인덱스가 원장 내부 Map을 직접 읽지 않고, 세 모듈이 이벤트·조회 계약으로만 연결되는가.',
+        weight: 15,
+        visibleToLearner: true,
+      },
+      {
+        name: '모호한 요구사항 확인',
+        description: '표시 지연 SLA 같은 미결정 사항을 임의 확정하지 않고 질문했거나 가정을 명시했는가.',
+        weight: 10,
+        visibleToLearner: false,
+      },
+    ],
+    explainTask: {
+      audience: '품절 CS 40건을 매주 처리해 온 CS팀 리더 (비개발자)',
+      prompt:
+        'CS팀 리더에게 개편을 설명하세요. (1) 왜 "검색은 판매중, 주문은 품절"이 생겼는지 — 세 개의 칠판에 세 사람이 제각각 적던 구조를 비유로, (2) 개편 후에는 칠판이 하나가 되고 나머지는 그 칠판을 베껴 쓰는 사본이 된다는 것 — 사본이 몇 초 늦을 수는 있지만 다른 말을 하지는 않게 됐다는 것, (3) 그래도 CS가 들어오면 무엇을 확인해 달라고 답하면 되는지 — "지금 원장 기준 재고"라는 단 하나의 질문. 다음 주간 회의에서 CS 건수 그래프 옆에 붙일 한 줄 설명으로 마무리하세요.',
+    },
+    endings: [
+      {
+        grade: 'calm',
+        title: '그래프가 심심한 주간 회의',
+        teaser: '품절 CS 주 40건이 3건이 되고, 그 3건도 전부 택배 문제였다. 검색팀 API TODO 주석은 커밋 히스토리 속에서만 산다.',
+      },
+      {
+        grade: 'hotfix',
+        title: '새로고침 안내 멘트',
+        teaser: '불일치는 사라졌다. 다만 재동기화가 돌 때마다 몇 초씩 옛 재고가 보여, CS 스크립트에 "새로고침 한번 부탁드립니다"가 공식 멘트로 추가된다.',
+      },
+      {
+        grade: 'dawn',
+        title: '-1개 남음',
+        teaser: '역전된 이벤트가 검증 없이 적용된 밤, 인기 상품 페이지에 "-1개 남음"이 캡처되어 커뮤니티 유머 게시판 1위에 오른다. 웃지 못하는 사람은 회의실에 모여 있다.',
+      },
+      {
+        grade: 'hidden',
+        title: '???',
+        teaser: '이 결말의 이벤트는 아직 발행되지 않았습니다. 조건은 비공개입니다.',
+      },
+    ],
+  },
+
+  // =========================================================================
+  // Mission 22 — Stage 11 "단순함의 철학" / 카페 키오스크 / 리팩토링
+  // =========================================================================
+  {
+    id: 's11-kiosk-01',
+    stage: 11,
+    stageTitle: '단순함의 철학',
+    missionType: '리팩토링',
+    difficulty: 'Normal',
+    scope: '여러 파일',
+    modes: ['developer'],
+    domain: '카페 키오스크',
+    domainEmoji: '☕',
+    title: '아메리카노 한 잔에 파일 일곱 개 — 과분리 레거시 병합',
+    estimatedMinutes: 120,
+    briefing: {
+      title: '분리를 배운 자만이 병합할 자격이 있다',
+      content: `### 이 커리큘럼의 자기반성
+
+여기까지 오는 동안 우리는 줄곧 분리를 배웠습니다. 책임을 나누고, 계약을 추출하고, 경계를 긋고. 그 훈련은 옳았습니다 — 그런데 이번 미션의 레거시를 만든 사람도 아마 같은 훈련을 받았을 겁니다. 그는 배운 대로 나눴습니다. 모든 클래스가 5줄이고, 모든 구현 앞에 인터페이스가 서 있고, 모든 호출이 다음 계층으로 정중하게 전달됩니다. 그리고 신메뉴 하나를 추가하려면 파일 일곱 개를 열어야 합니다. **분리는 수단이지 목적이 아닙니다.** 수단이 목적이 되는 순간, 설계 원칙은 복잡도의 생산 라인이 됩니다.
+
+### 깊은 모듈 — 작은 문, 큰 방
+
+존 아우스터하우트는 《A Philosophy of Software Design》에서 좋은 모듈을 이렇게 정의합니다. **인터페이스는 좁고, 구현은 깊은 모듈** — 문은 작은데 방은 큰 구조. 반대말은 얕은 모듈입니다. 문 크기와 방 크기가 같아서, 문을 여는 수고에 대한 보상이 없는 클래스. 호출을 그대로 다음에게 넘기는 pass-through 메서드, 구현이 하나뿐인데 "언젠가를 위해" 서 있는 인터페이스가 그 전형입니다. 그의 진단으로 복잡도의 출처는 둘뿐입니다 — **의존성**, 그리고 **불명료함**. 얕은 계층은 그 둘을 모두 늘립니다. 추상화가 정보를 숨기지 못하면, 그것은 설계가 아니라 통행료입니다.
+
+### 다만, 전부 합치면 그것도 틀린다
+
+주의할 것이 하나 있습니다. 이 레거시 안에도 진짜 필요한 분리가 숨어 있습니다 — 구현이 실제로 둘인 경계가. 병합의 칼을 휘두르다 그것까지 베면 동작이 부러집니다. 무엇을 합치고 무엇을 남길지 가르는 눈, 그것이 분리를 배운 사람만이 가질 수 있는 자격이고, 이 커리큘럼의 마지막 훈련입니다.`,
+    },
+    scenario: `동네 카페 사장님의 키오스크 소프트웨어를 인수인계받았습니다. 전임 개발자는 성실했고, 공부도 많이 한 사람이었습니다 — 주문 하나가 지나가는 길에 파일이 14개 있습니다. 사장님의 요청은 소박합니다. **"신메뉴 하나 넣는 데 왜 견적이 이틀인가요? 파일을 일곱 개 고쳐야 한다면서요."** 다음 달 신메뉴는 콜드브루와 말차라떼, 그다음 달은 시즌 메뉴 셋. 이 속도면 메뉴판이 코드를 이깁니다. 출력되는 영수증은 지금과 같아야 합니다 — 단골들이 영수증 모양에 예민합니다.`,
+    providedFiles: [],
+    legacyFiles: [
+      {
+        path: 'src/main/java/com/cafe/OrderRequest.java',
+        content: `package com.cafe;
+
+/** 주문 요청. temp가 null이면 키오스크에서 온도 선택을 건너뛴 것. */
+public record OrderRequest(String menu, String size, String temp, int shots, String channel) {
+}`,
+      },
+      {
+        path: 'src/main/java/com/cafe/KioskMain.java',
+        content: `package com.cafe;
+
+/** 키오스크 진입점. */
+public class KioskMain {
+
+    public static void main(String[] args) {
+        OrderProcessor processor = new OrderProcessor();
+        System.out.println(processor.process(new OrderRequest("아메리카노", "GRANDE", null, 1, "KIOSK")));
+        System.out.println(processor.process(new OrderRequest("카페라떼", "TALL", "ICE", 0, "KIOSK")));
+        System.out.println(processor.process(new OrderRequest("아메리카노", "TALL", "ICE", 2, "APP")));
+        // 기대 출력:
+        // [영수증] 아메리카노 (GRANDE/HOT/샷1) 5,500원
+        // [영수증] 카페라떼 (TALL/ICE/샷0) 5,000원
+        // [알림톡] 아메리카노 (TALL/ICE/샷2) 5,500원
+    }
+}`,
+      },
+      {
+        path: 'src/main/java/com/cafe/OrderProcessor.java',
+        content: `package com.cafe;
+
+/** 주문 처리 오케스트레이터. 각 단계를 순서대로 부른다. */
+public class OrderProcessor {
+
+    private final OrderNormalizer normalizer = new OrderNormalizer();
+    private final OrderValidator validator = new OrderValidator();
+    private final IBeverageFactoryProvider factoryProvider = new BeverageFactoryProviderImpl();
+
+    public String process(OrderRequest request) {
+        OrderRequest normalized = normalizer.normalize(request);
+        validator.validate(normalized);
+        Beverage beverage = factoryProvider.getFactory().create(normalized);
+        IPriceStrategy strategy = new DefaultPriceStrategy();
+        int price = strategy.price(beverage);
+        IReceiptPrinter printer = normalized.channel().equals("APP")
+                ? new KakaoReceiptSender()
+                : new ThermalReceiptPrinter();
+        return printer.print(beverage, price);
+    }
+}`,
+      },
+      {
+        path: 'src/main/java/com/cafe/OrderNormalizer.java',
+        content: `package com.cafe;
+
+/** 주문 정규화. 이름과 달리, 하는 일이 하나 더 있다. */
+public class OrderNormalizer {
+
+    public OrderRequest normalize(OrderRequest req) {
+        String temp = req.temp();
+        if (temp == null) {
+            temp = "HOT";   // 2022.11 키오스크 온도 선택 누락 대응. 둘 데가 없어서 여기 둠 (조대리)
+        }
+        return new OrderRequest(req.menu().trim(), req.size(), temp, req.shots(), req.channel());
+    }
+}`,
+      },
+      {
+        path: 'src/main/java/com/cafe/OrderValidator.java',
+        content: `package com.cafe;
+
+import java.util.List;
+
+/** 주문 검증. 사이즈 목록 확인이 전부다. */
+public class OrderValidator {
+
+    private static final List<String> SIZES = List.of("TALL", "GRANDE", "VENTI");
+
+    public void validate(OrderRequest req) {
+        if (!SIZES.contains(req.size())) {
+            throw new IllegalArgumentException("알 수 없는 사이즈: " + req.size());
+        }
+    }
+}`,
+      },
+      {
+        path: 'src/main/java/com/cafe/IBeverageFactoryProvider.java',
+        content: `package com.cafe;
+
+/** 음료 팩토리 제공자 인터페이스. 구현은 하나뿐이다. */
+public interface IBeverageFactoryProvider {
+
+    BeverageFactory getFactory();
+}`,
+      },
+      {
+        path: 'src/main/java/com/cafe/BeverageFactoryProviderImpl.java',
+        content: `package com.cafe;
+
+/** 팩토리 제공자 구현. new를 한 번 대신 해 준다. */
+public class BeverageFactoryProviderImpl implements IBeverageFactoryProvider {
+
+    @Override
+    public BeverageFactory getFactory() {
+        return new BeverageFactory();
+    }
+}`,
+      },
+      {
+        path: 'src/main/java/com/cafe/BeverageFactory.java',
+        content: `package com.cafe;
+
+import java.util.Map;
+
+/** 음료 생성. 메뉴별 기본 가격은 여기 산다. */
+public class BeverageFactory {
+
+    private static final Map<String, Integer> BASE_PRICE = Map.of(
+            "아메리카노", 4500,
+            "카페라떼", 5000);
+
+    public Beverage create(OrderRequest req) {
+        Integer base = BASE_PRICE.get(req.menu());
+        if (base == null) {
+            throw new IllegalArgumentException("없는 메뉴: " + req.menu());
+        }
+        return new Beverage(req.menu(), req.size(), req.temp(), req.shots(), base);
+    }
+}`,
+      },
+      {
+        path: 'src/main/java/com/cafe/Beverage.java',
+        content: `package com.cafe;
+
+/** 만들어진 음료. */
+public record Beverage(String menu, String size, String temp, int shots, int basePrice) {
+}`,
+      },
+      {
+        path: 'src/main/java/com/cafe/IPriceStrategy.java',
+        content: `package com.cafe;
+
+/** 가격 전략 인터페이스. 전략은 지금까지 하나뿐이었다. */
+public interface IPriceStrategy {
+
+    int price(Beverage beverage);
+}`,
+      },
+      {
+        path: 'src/main/java/com/cafe/DefaultPriceStrategy.java',
+        content: `package com.cafe;
+
+/** 기본 가격 계산. 샷 +500원, 사이즈 GRANDE +500원, VENTI +1,000원. */
+public class DefaultPriceStrategy implements IPriceStrategy {
+
+    @Override
+    public int price(Beverage b) {
+        int p = b.basePrice() + b.shots() * 500;
+        if (b.size().equals("GRANDE")) {
+            p = p + 500;
+        } else if (b.size().equals("VENTI")) {
+            p = p + 1000;
+        }
+        return p;
+    }
+}`,
+      },
+      {
+        path: 'src/main/java/com/cafe/IReceiptPrinter.java',
+        content: `package com.cafe;
+
+/** 영수증 출력 인터페이스. */
+public interface IReceiptPrinter {
+
+    String print(Beverage beverage, int price);
+}`,
+      },
+      {
+        path: 'src/main/java/com/cafe/ThermalReceiptPrinter.java',
+        content: `package com.cafe;
+
+/** 감열지 영수증. 키오스크 주문용. */
+public class ThermalReceiptPrinter implements IReceiptPrinter {
+
+    @Override
+    public String print(Beverage b, int price) {
+        return String.format("[영수증] %s (%s/%s/샷%d) %,d원",
+                b.menu(), b.size(), b.temp(), b.shots(), price);
+    }
+}`,
+      },
+      {
+        path: 'src/main/java/com/cafe/KakaoReceiptSender.java',
+        content: `package com.cafe;
+
+/** 알림톡 영수증. 앱 주문용 — 이 인터페이스의 두 번째 구현이자, 존재 이유. */
+public class KakaoReceiptSender implements IReceiptPrinter {
+
+    @Override
+    public String print(Beverage b, int price) {
+        return String.format("[알림톡] %s (%s/%s/샷%d) %,d원",
+                b.menu(), b.size(), b.temp(), b.shots(), price);
+    }
+}`,
+      },
+    ],
+    requirements: [
+      '동작 보존: KioskMain의 기대 출력 3줄 — 아메리카노 GRANDE 5,500원(영수증), 카페라떼 TALL 5,000원(영수증), 아메리카노 앱 주문 5,500원(알림톡) — 은 개편 후에도 한 글자도 달라지면 안 됩니다. 수정 전에 테스트로 고정하세요.',
+      '병합: 주문 흐름의 파일 수를 절반 이하로 줄이세요. 구현이 하나뿐이고 정보를 숨기지 못하는 인터페이스(IBeverageFactoryProvider, IPriceStrategy 등)와 호출을 그대로 넘기기만 하는 계층은 병합 대상입니다. 개편 후 "신메뉴 하나 추가에 수정하는 지점"이 1~2곳이어야 합니다.',
+      '남길 것을 남기기: 영수증 출력은 감열지와 알림톡, 실제 구현이 둘입니다. 이 경계는 정당한 분리이므로 유지하되, 왜 이것만 남기고 나머지는 합쳤는지 판단 기준을 리뷰 노트로 남기세요.',
+      '메뉴와 옵션 가격(기본가, 샷 +500, 사이즈 추가금)은 코드 분기가 아니라 데이터로 두어, 콜드브루·말차라떼 추가가 데이터 등록으로 끝나게 하세요.',
+      '증거 제출: 개편 전과 후에 대해 "신메뉴 1개 추가 시 열어야 하는 파일 목록"을 각각 적은 비교표를 리뷰 노트에 포함하세요. 사장님의 질문("왜 이틀인가요?")에 대한 답이 그 표입니다.',
+      '사장님 예고: "포인트 적립도 곧 넣을 거예요. 아마도? 내년쯤?" (적립 규칙도 시점도 미정입니다 — 이를 근거로 지금 인터페이스를 미리 만들어 둘지는 여러분이 판단하고, 판단의 근거를 남기세요)',
+    ],
+    constraints: [
+      '리팩토링 미션입니다 — 기대 출력 3줄이 어긋나는 순간 그것은 단순화가 아니라 사고입니다.',
+      '도메인 규칙: 온도 미지정 주문은 HOT으로 처리됩니다. 이 규칙은 2022년 키오스크 사고의 산물로, 어디로 옮기든 살아 있어야 합니다.',
+      '병합의 근거는 "구현이 하나라서"가 아니라 "인터페이스가 정보를 숨기지 못해서"여야 합니다. 판단마다 한 줄 근거를 남기세요.',
+      '외부 라이브러리 없이 순수 Java 17로 작성합니다.',
+    ],
+    learningGoals: [
+      '얕은 모듈(pass-through, 구현 하나짜리 인터페이스)을 식별하고 깊은 모듈로 병합하는 판단력',
+      '복잡도의 출처(의존성, 불명료함)를 기준으로 추상화의 값어치를 계산하는 습관 — 추상화는 공짜가 아니다',
+      '병합 속에서도 지켜야 할 정당한 분리(실제 다형성이 있는 경계)를 가려내는 눈',
+      '변경 비용(신메뉴 추가에 여는 파일 수)을 설계 품질의 측정 지표로 쓰는 훈련 — 분리는 수단이지 목적이 아니다',
+    ],
+    hints: [
+      '병합 전에 신메뉴 추가를 머릿속으로 한번 수행해 보세요. 콜드브루를 넣으려면 어떤 파일들이 열립니까? 그 목록에 있는데 콜드브루에 대해 아무 결정도 하지 않는 파일 — 그것이 얕은 계층입니다. 결정이 없는 곳에 파일이 있을 이유가 없습니다.',
+      'IBeverageFactoryProvider를 지우기 전에 구현을 세어 보세요(하나), IReceiptPrinter도 세어 보세요(둘). 개수가 판단의 전부는 아니지만 첫 번째 신호입니다. 그리고 pass-through를 걷어 낼 때는 각 계층 안에 숨은 "한 줄짜리 진짜 일"(HOT 기본값, 사이즈 검증)을 먼저 찾아 옮길 곳을 정하세요 — 사슬은 걷어 내고 일은 남깁니다.',
+      '옵션 가격이 if (size.equals(...)) 분기에 있으면 시즌 메뉴가 올 때마다 분기가 자랍니다. 메뉴 기본가와 옵션 추가금을 하나의 가격표 데이터로 합치면, 주문 흐름은 "가격표 조회 + 합산 + 영수증"이라는 좁은 문 뒤의 깊은 방 하나로 정리됩니다.',
+    ],
+    hiddenCases: [
+      {
+        title: '두 번째 구현의 존재',
+        description:
+          '병합 열풍에 휩쓸려 IReceiptPrinter까지 감열지 출력으로 합쳐 버리면, 앱 주문 고객의 알림톡 영수증이 조용히 사라집니다 — 세 번째 기대 출력이 그 사고를 즉시 잡아 줍니다. 인터페이스 하나를 지우기 전에 반드시 구현의 개수와 호출 경로를 확인하세요. 과분리의 해독제는 무분별한 병합이 아니라, 분리마다 근거를 요구하는 것입니다.',
+      },
+      {
+        title: '옵션 조합 폭발',
+        description:
+          '병합하면서 음료 종류를 클래스로(Americano, Latte...), 옵션을 하위 분기로 표현하면 샷×사이즈×온도 조합마다 코드가 자랍니다 — 과분리를 과상속으로 바꾼 것뿐입니다. 좋은 방어: 음료와 옵션을 데이터(가격표)로 두고 조합은 계산으로 처리하세요. 조합이 폭발해도 데이터는 폭발하지 않습니다.',
+      },
+      {
+        title: '사슬에 숨어 있던 한 줄',
+        description:
+          'OrderNormalizer는 pass-through처럼 보이지만 "온도 null → HOT" 부수효과를 품고 있습니다. 사슬을 통째로 걷어 내면 온도 미지정 주문의 영수증이 (GRANDE/null/샷1)로 바뀌거나 예외로 죽습니다 — 첫 번째 기대 출력이 그 함정의 감시자입니다. 좋은 방어: 계층을 지우기 전에 각 계층의 diff를 실제로 읽고, 숨은 규칙은 이름을 붙여(기본값 정책) 명시적인 자리로 옮기세요.',
+      },
+    ],
+    rubric: [
+      {
+        name: '깊은 모듈로의 병합',
+        description: '얕은 인터페이스와 pass-through 계층이 근거와 함께 제거되고, 주문 흐름이 좁은 문·깊은 방 구조로 정리되었는가. 파일 수 목표를 달성했는가.',
+        weight: 30,
+        visibleToLearner: true,
+      },
+      {
+        name: '동작 보존',
+        description: '기대 출력 3줄(HOT 기본값, 알림톡 포함)이 개편 전후로 동일하고, 이를 테스트로 먼저 고정했는가.',
+        weight: 25,
+        visibleToLearner: true,
+      },
+      {
+        name: '남긴 분리의 판단',
+        description: '영수증 경계처럼 실제 다형성이 있는 분리를 유지했고, 합친 것과 남긴 것의 기준이 일관되게 문서화되었는가.',
+        weight: 20,
+        visibleToLearner: true,
+      },
+      {
+        name: '변경 비용의 입증',
+        description: '신메뉴 추가 파일 목록 비교표가 제출되었고, 개편 후 수정 지점이 1~2곳(데이터 등록)으로 줄었는가.',
+        weight: 15,
+        visibleToLearner: true,
+      },
+      {
+        name: '모호한 요구사항 확인',
+        description: '포인트 적립 같은 불확실한 미래 요구에 대해 선제 추상화 여부를 근거와 함께 판단하고 기록했는가.',
+        weight: 10,
+        visibleToLearner: false,
+      },
+    ],
+    explainTask: {
+      audience: '견적 이틀에 상처받은 카페 사장님 (비개발자, 메뉴 개발은 하루면 끝내는 분)',
+      prompt:
+        '사장님께 설명해 주세요. (1) 왜 지금까지 신메뉴 하나에 파일 일곱 개를 고쳤는지 — 주방 동선에 빗대어(컵 하나 꺼내는데 문 일곱 개를 여는 주방), (2) 개편 후에는 신메뉴 추가가 무엇으로 바뀌는지 — 코드 수정이 아니라 메뉴판(가격표)에 한 줄 적는 일이 된다는 것, (3) 다만 영수증 기계와 알림톡처럼 진짜로 다른 일 두 가지는 일부러 나눠 뒀다는 것과 그 이유. 마지막으로 다음 신메뉴 콜드브루의 예상 소요 시간을 말씀드리고, 그 시간이 왜 믿을 만한 숫자인지 한 문장으로 끝내세요.',
+    },
+    endings: [
+      {
+        grade: 'calm',
+        title: '메뉴판이 이기지 못한 코드',
+        teaser: '콜드브루 추가에 20분, 시즌 메뉴 셋에 한 시간. 사장님은 견적을 묻는 대신 시식을 권하기 시작하고, 파일 열네 개의 시대는 커밋 로그에만 남는다.',
+      },
+      {
+        grade: 'hotfix',
+        title: '반쯤 얕은 계단',
+        teaser: '파일은 줄었다. 다만 합치다 만 계층이 두엇 남아, 신메뉴마다 "이 파일도 고쳐야 하나?"를 확인하는 10분이 의식처럼 남는다.',
+      },
+      {
+        grade: 'dawn',
+        title: '조용히 사라진 알림톡',
+        teaser: '병합의 칼이 영수증 경계까지 벤 날, 앱 주문 고객들의 영수증이 소리 없이 증발한다. 단골의 제보로 알게 된 사장님의 표정이 견적 이틀 때보다 어둡다.',
+      },
+      {
+        grade: 'hidden',
+        title: '???',
+        teaser: '이 결말의 레시피는 아직 메뉴판에 없습니다. 조건은 비공개입니다.',
+      },
+    ],
+  },
+
+  // =========================================================================
+  // Mission 23 — Stage 7 "테스트가 설계를 이끈다" / 해운·항해 / 도메인 로직 구현
+  // =========================================================================
+  {
+    id: 's7-tide-01',
+    stage: 7,
+    stageTitle: '테스트가 설계를 이끈다',
+    missionType: '도메인 로직 구현',
+    difficulty: 'Normal',
+    scope: '여러 파일',
+    modes: ['developer'],
+    domain: '해운·항해',
+    domainEmoji: '🌊',
+    title: '물때를 아는 코드 — 입출항 시간창 계산기',
+    estimatedMinutes: 130,
+    briefing: {
+      title: '경계값을 아는 자가 항구를 안다',
+      content: `### 바다의 시간표
+
+바닷물은 하루에 두 번 차고 두 번 빠집니다. 달과 태양의 인력이 지구의 물을 잡아당기는 조석(潮汐) — 달·태양·지구가 일직선이 되는 보름과 그믐엔 차이가 커지고(사리), 직각이 되면 작아집니다(조금). 어부와 뱃사람들은 수천 년 동안 이 리듬을 "물때"라 부르며 시간표로 썼습니다. 항구에 언제 들어갈 수 있는가는 곧 물이 언제 차는가였으니까요.
+
+### 흘수와 수심 — 통과의 방정식
+
+배가 물에 잠기는 깊이를 **흘수(draft)**라 합니다. 항로의 기본 수심에 그 시각의 조위(조석 높이)를 더한 것이 실제 수심이고, 실제 수심이 흘수에 안전 여유(underkeel clearance)를 더한 값 이상일 때만 배는 지나갈 수 있습니다. 대형선일수록 이 조건을 만족하는 시간대가 하루 중 몇 시간뿐이라, 항만 관제는 선박마다 **입출항 가능 시간창(tidal window)**을 계산해 줍니다. 창을 놓치면 다음 만조까지 바다 위에서 기다리고, 창을 잘못 계산하면 배가 바닥에 앉습니다. 2021년 수에즈 운하를 막은 컨테이너선의 이초(離礁) 작업이 대조기 만조에 맞춰졌던 것도 같은 계산입니다.
+
+### 테스트 리스트가 곧 해도다
+
+켄트 벡의 《테스트 주도 개발》이 말하는 첫 습관 — 코드 전에 통과해야 할 시험의 목록을 적는 것 — 은 이 도메인에서 특히 자연스럽습니다. 시간창 계산기의 시험 목록은 물때 그 자체거든요. 조위가 필요 수심과 **정확히 같아지는 순간**은 통과인가? 창이 **자정을 걸치면** 어떻게 표기하는가? 아무리 물이 빠져도 지나갈 수 있는 작은 배와, 만조에도 못 들어오는 큰 배는? 이 목록을 막힘없이 적을 수 있을 때, 여러분은 항구를 이해한 것입니다. 경계값을 아는 자가 항구를 압니다.`,
+    },
+    scenario: `항만 운영사의 관제 지원팀에 **입출항 시간창 계산기**를 만들어 줍니다. 조석표(만조·간조의 시각과 조위)는 해양조사원 데이터를 받아 오는 엔진이 제공하고, 여러분은 "흘수 X미터 선박이 기본 수심 Y미터 항로를 통과할 수 있는 시간창"을 계산합니다. 지난달 타사 시스템이 창의 끝 경계를 1분 잘못 계산해 벌크선이 항로 한가운데서 회항한 사건 이후, 관제실장의 요구는 단호합니다 — **"구현 말고, 어떤 경계를 검증했는지부터 보여 주세요."** 이 스테이지의 규칙대로, 테스트가 먼저입니다.`,
+    providedFiles: [
+      {
+        path: 'src/main/java/com/port/tide/TideTable.java',
+        content: `package com.port.tide;
+
+import java.util.List;
+
+/**
+ * 조석표 (해양조사원 데이터 연동 — 엔진입니다. 수정/재구현 금지, 그대로 사용).
+ * 하루의 극조(만조/간조) 목록을 돌려준다. 시각은 "자정으로부터의 분"이며,
+ * 창 계산에 필요한 다음 날 첫 극조는 1440을 넘는 분으로 포함되어 있다.
+ * 극조와 극조 사이의 조위는 선형 보간으로 근사한다 (이 미션의 단순화 규칙 —
+ * 실제 조위 곡선은 사인형이지만, 여기서는 검산 가능성을 위해 직선을 쓴다).
+ */
+public class TideTable {
+
+    /** 극조 하나: 시각(분)과 조위(m). */
+    public record TideEvent(int minute, double heightM) {
+    }
+
+    /** 검증 기준일의 극조 목록 (다음 날 첫 극조 포함, 시각 오름차순). */
+    public List<TideEvent> eventsOf(String date) {
+        if (date.equals("2026-08-01")) {
+            return List.of(
+                    new TideEvent(180, 1.0),    // 03:00 간조
+                    new TideEvent(540, 5.0),    // 09:00 만조
+                    new TideEvent(900, 1.0),    // 15:00 간조
+                    new TideEvent(1260, 5.0),   // 21:00 만조
+                    new TideEvent(1620, 1.0));  // 다음 날 03:00 간조
+        }
+        return List.of();
+    }
+}`,
+      },
+    ],
+    legacyFiles: [
+      {
+        path: 'src/main/java/com/port/window/TidalWindowCalculator.java',
+        content: `package com.port.window;
+
+/**
+ * 입출항 시간창 계산기 (구현 대상).
+ *
+ * 이 스테이지의 규칙: 이 파일보다 테스트 파일을 먼저 여세요.
+ * 1) 검증 항목의 목록(테스트 리스트)을 테스트 파일 상단 주석으로 먼저 적는다.
+ * 2) 테스트 하나 → 통과할 만큼의 구현 → 다음 테스트의 리듬으로 간다.
+ * 경계가 많은 도메인입니다 — 조위가 필요 수심과 정확히 같은 순간, 자정을 걸치는 창,
+ * 창이 없는 배, 하루 종일이 창인 배. 리뷰는 그 경계들이 테스트로 못박혔는지를 봅니다.
+ */
+public class TidalWindowCalculator {
+
+    /**
+     * 통과 가능 시간창 목록. 계산 구간은 당일 첫 극조 시각부터 자정(1440분)까지.
+     * 조건: 기본 수심 + 조위 >= 흘수 + 안전 여유 (등호 포함).
+     */
+    public Object windows(String date, double draftM, double channelDepthM, double clearanceM) {
+        // TODO 반환 타입 설계부터 여러분의 몫입니다. 테스트가 먼저입니다.
+        throw new UnsupportedOperationException("아직 구현되지 않았습니다");
+    }
+}`,
+      },
+    ],
+    requirements: [
+      '통과 조건(스펙): 기본 수심 + 그 시각의 조위 ≥ 흘수 + 안전 여유 (등호 포함 — 정확히 같으면 통과). 조위는 인접한 두 극조 사이를 선형 보간합니다. 계산 구간은 당일 첫 극조 시각부터 자정(24:00)까지이며, 보간에는 엔진이 주는 다음 날 첫 극조를 사용합니다.',
+      '검증 예제(2026-08-01 조석표: 간조 03:00 1.0m, 만조 09:00 5.0m, 간조 15:00 1.0m, 만조 21:00 5.0m, 익일 03:00 1.0m): 흘수 6.5m, 기본 수심 4.0m, 여유 0.5m인 벌크선의 필요 조위는 6.5 + 0.5 − 4.0 = 3.0m. 시간창은 정확히 두 개 — 06:00~12:00, 18:00~24:00. 두 번째 창이 자정에서 끝나는 표기까지 검증 대상입니다.',
+      '경계 검증: 같은 조석표에서 흘수 4.2m·여유 0.3m(필요 조위 0.5m ≤ 최저 간조 1.0m)는 계산 구간 전체(03:00~24:00)가 창이어야 하고, 흘수 9.0m·여유 0.5m(필요 조위 5.5m > 최고 만조 5.0m)는 창이 하나도 없어야 합니다. "창 없음"은 빈 목록이되, 결과에 사유(최대 조위로도 부족)가 담겨야 합니다.',
+      '테스트 우선: 구현 전에 테스트 리스트를 주석으로 작성하고 리스트 항목과 테스트 메서드를 1:1로 대응시키세요. 필수 경계 — 필요 조위와 조위가 정확히 같은 순간(등호), 만조 꼭짓점이 창의 한 점인 경우, 자정 종료, 창 없음, 전 구간 창 — 는 각각 별도의 서술형 이름 테스트여야 합니다.',
+      '창의 시각은 분 단위 정수로 계산하고 "HH:MM" 형식으로 표기합니다. 보간 계산의 중간값 반올림 규칙(분 미만 버림/올림)이 창의 시작과 끝에서 안전한 방향(시작은 늦게, 끝은 일찍)인지 — 그 판단을 테스트 이름에 드러내세요.',
+      '관제실 추가 요청: "야간에는 대형선 통항을 제한하고 싶어요." (야간의 정의 — 일몰 기준인지 고정 시각인지 — 는 아직 항만마다 다르다는 답만 돌아왔습니다)',
+    ],
+    constraints: [
+      'TideTable.java는 엔진 코드입니다. 수정·재구현 금지, 그대로 사용하세요. 조위 곡선의 선형 보간은 이 미션의 명시적 단순화입니다 — 실제 조석 계산과 다름을 코드 주석에 남기세요.',
+      '도메인 규칙: 창의 판정은 등호 포함(≥)입니다. 안전 여유를 등호 처리로 흡수하려는 임의 변경을 금지합니다 — 여유는 이미 입력에 있습니다.',
+      '계산 로직의 단위 테스트는 TideTable 없이(극조 목록을 직접 주입해) 돌 수 있어야 합니다.',
+      '외부 라이브러리 없이 순수 Java 17로 작성합니다.',
+    ],
+    learningGoals: [
+      '테스트 리스트 먼저 — 도메인의 경계값 목록을 적는 행위가 스펙 이해의 완성임을 다른 도메인에서 한 번 더 체감하기',
+      '등호 포함/제외, 반올림 방향 같은 미세 규칙이 안전에 직결되는 도메인에서 테스트 이름으로 규칙을 문서화하기',
+      '보간·교차점 계산을 순수 함수로 분리해 테이블 없이 테스트 가능한 구조가 자연히 유도되는 경험',
+      '조석이라는 물리 세계의 리듬을 계산 가능한 모델로 옮기며 단순화의 경계를 명시하는 습관',
+    ],
+    hints: [
+      '테스트 리스트의 절반은 스펙 문장에서 그대로 나옵니다 — "등호 포함", "자정까지", "창 없음". 나머지 절반은 조석표를 그려 보면 나옵니다. 종이에 톱니 모양 조위 그래프를 그리고 필요 조위 3.0m에 수평선을 그어 보세요. 선이 그래프와 만나는 점의 개수가 곧 테스트의 개수입니다.',
+      '창의 시작과 끝은 "직선과 수평선의 교차점"입니다. 두 극조 (t1,h1)-(t2,h2) 사이에서 필요 조위 h를 지나는 시각은 t1 + (h−h1)/(h2−h1)×(t2−t1) — 이 교차점 계산 하나를 순수 함수로 빼서 먼저 테스트로 못박으면, 창 조립은 그 함수를 이어 붙이는 일이 됩니다.',
+      '상승 구간과 하강 구간을 따로 다루려 하면 분기가 늘어납니다. "조위 ≥ 필요조위인 구간의 합집합"으로 생각하면 극조 목록을 한 번 훑으며 진입점(상승 교차)과 이탈점(하강 교차)을 수집하는 루프 하나로 정리되고, 자정 절단은 마지막에 구간을 자르는 후처리가 됩니다.',
+    ],
+    hiddenCases: [
+      {
+        title: '이 빠진 조석표',
+        description:
+          '통신 장애나 관측 결측으로 극조가 세 개뿐이거나 시각이 역순인 데이터가 오는 날이 있습니다. 선형 보간은 조용히 이상한 기울기를 만들어 존재하지 않는 창을 그립니다. 좋은 방어: 계산 전에 극조 목록의 최소 개수·시각 오름차순·만조와 간조의 교대를 검증하고, 위반이면 창을 계산하지 말고 "조석표 이상"으로 명시적으로 실패하세요. 틀린 창은 없는 창보다 위험합니다.',
+      },
+      {
+        title: '흘수 0의 유령선',
+        description:
+          '입력 실수로 흘수가 0이나 음수로 들어오면 필요 조위가 음수가 되어 "항상 통과"라는 그럴듯한 답이 나옵니다. 물에 잠기지 않는 배는 없습니다. 좋은 방어: 흘수 > 0, 여유 ≥ 0, 기본 수심 > 0의 입력 검증을 입구에 두고 명시적으로 거부하세요 — 그리고 그 검증들도 테스트 리스트의 항목이어야 합니다.',
+      },
+      {
+        title: '한 점짜리 창',
+        description:
+          '필요 조위가 만조 조위와 정확히 같으면(이 조석표에서 필요 조위 5.0m) 창은 09:00 정각 단 한 점입니다. 수학적으로는 통과 가능이지만, 폭 0분의 창을 항해사에게 "통과 가능"으로 건네면 그것은 좌초 안내문입니다. 좋은 방어: 창의 최소 폭이라는 개념이 스펙에 없음을 발견하고 질문으로 되돌리거나, 점 창을 별도 표시("이론상 순간 통과")로 구분하세요. 등호 경계 테스트가 이 사례를 수면 위로 끌어올립니다.',
+      },
+    ],
+    rubric: [
+      {
+        name: '테스트 품질',
+        description: '필수 경계(등호, 점 창, 자정, 창 없음, 전 구간)가 각각 서술형 이름의 독립 테스트로 못박혔는가. 한 테스트 한 검증이 지켜졌는가.',
+        weight: 30,
+        visibleToLearner: true,
+      },
+      {
+        name: '테스트 우선의 증거',
+        description: '테스트 리스트 주석이 있고 테스트와 1:1 대응하는가. 구현이 리스트 범위를 넘어 과잉 설계되지 않았는가.',
+        weight: 15,
+        visibleToLearner: true,
+      },
+      {
+        name: '도메인 규칙 정확성',
+        description: '검증 예제의 두 창(06:00~12:00, 18:00~24:00)과 경계 검증(전 구간 창, 창 없음)이 정확히 일치하는가.',
+        weight: 30,
+        visibleToLearner: true,
+      },
+      {
+        name: '계산 구조',
+        description: '교차점 계산이 순수 함수로 분리되어 테이블 없이 테스트되는가. 상승/하강 분기 대신 구간 수집으로 정리되었는가.',
+        weight: 15,
+        visibleToLearner: true,
+      },
+      {
+        name: '모호한 요구사항 확인',
+        description: '야간 통항 제한의 기준 같은 미정의 규칙을 임의 확정하지 않고 질문했거나 테스트 리스트에 미결로 남겼는가.',
+        weight: 10,
+        visibleToLearner: false,
+      },
+    ],
+    explainTask: {
+      audience: '30년 경력의 도선사 (물때는 몸으로 알지만 소프트웨어 검증은 처음인 분)',
+      prompt:
+        '도선사님께 설명하세요. (1) 이 계산기가 물때를 어떻게 아는지 — 조석표의 극조 사이를 직선으로 잇는 단순화를 정직하게 밝히고, 그 단순화가 안전 방향인지 아닌지, (2) 코드를 짜기 전에 "시험 목록"부터 만들었다는 것 — 도선사님이 신참에게 항로의 위험 지점 목록부터 외우게 하는 것과 같은 이유임을, (3) 창의 끝 1분이 틀렸던 타사 사고가 우리 시스템에서는 어느 테스트에 걸려 배포 전에 죽는지. 항해 용어는 그대로 쓰되, 소프트웨어 용어는 배의 언어로 번역하세요.',
+    },
+    endings: [
+      {
+        grade: 'calm',
+        title: '창대로 들어온 배',
+        teaser: '대조기의 벌크선들이 계산된 창의 한가운데로 정확히 들어온다. 관제실장은 타사 사고 기사를 책갈피에서 지우고, 테스트 리스트를 신입 교육 자료로 가져간다.',
+      },
+      {
+        grade: 'hotfix',
+        title: '5분의 안전 마진',
+        teaser: '창은 맞는다. 다만 반올림 방향을 아무도 확신하지 못해 관제사들이 창의 양 끝을 5분씩 잘라 쓰고, 그 관행이 매뉴얼이 된다.',
+      },
+      {
+        grade: 'dawn',
+        title: '바닥에 앉은 배',
+        teaser: '점 창이 "통과 가능"으로 안내된 사리 날, 만조 꼭짓점을 2분 지난 배가 항로에서 속도를 잃는다. 예인선 비용 청구서와 함께 창 계산 로그가 소환된다.',
+      },
+      {
+        grade: 'hidden',
+        title: '???',
+        teaser: '이 결말의 물때는 아직 오지 않았습니다. 조건은 비공개입니다.',
+      },
+    ],
+  },
+
+  // =========================================================================
+  // Mission 24 — Stage 1 "분리의 감각" / 게임 (가챠 확률) / 도메인 로직 구현
+  // =========================================================================
+  {
+    id: 's1-gacha-01',
+    stage: 1,
+    stageTitle: '분리의 감각',
+    missionType: '도메인 로직 구현',
+    difficulty: 'Easy',
+    scope: '단일 파일',
+    modes: ['developer'],
+    domain: '게임 · 확률형 아이템',
+    domainEmoji: '🎰',
+    title: '1%의 진실 — 가챠 확률 공시 계산기',
+    estimatedMinutes: 90,
+    briefing: {
+      title: '100번 뽑으면 나온다는 착각',
+      content: `### 63.4%의 진실
+
+"획득 확률 1%면 100번 뽑으면 나오는 거 아냐?" — 게임 커뮤니티의 영원한 착각입니다. 매 회가 독립 시행이라면 100번 안에 한 번이라도 나올 확률은 1 − 0.99¹⁰⁰ = **63.4%**. 셋 중 하나는 100번을 뽑고도 빈손이라는 뜻입니다. 기대값과 보장은 다른 말이고, 그 간극에서 과금과 원성이 함께 자랍니다.
+
+### 천장이라는 사회적 합의
+
+그래서 현대 가챠에는 **천장(pity)**이 생겼습니다. 일정 횟수까지 못 뽑으면 확률이 계단식으로 올라가고, 정해진 회차에는 100%로 보장되는 구조 — 확률의 잔인함에 상한선을 긋는 장치입니다. 그리고 2021년, 국내 게임계를 뒤흔든 확률 조작 논란들 끝에 확률형 아이템의 **확률 공시가 법제화**됐습니다(2024년 시행). 이제 "몇 회차에 확률이 몇 %인가"는 마케팅 문구가 아니라 법적 공시 사항이고, 공시표의 숫자가 실제 구현과 다르면 그것은 버그가 아니라 위법입니다.
+
+### 주사위 없이 계산하기
+
+오해를 하나 걷어냅시다 — 이번 미션에 난수는 없습니다. 공시 계산은 전부 결정적(deterministic) 수학입니다. 회차별 확률에서 누적 획득 확률을 곱셈으로 쌓고, 기대 시도 횟수를 합산하고, 그 결과를 공시표로 찍어 내는 것. 같은 입력이면 언제나 같은 표가 나와야 감사에 쓸 수 있습니다. 다만 이 계산 안에는 성격이 다른 두 가지 일이 숨어 있습니다 — **확률을 계산하는 일**과 **표를 예쁘게 찍는 일**. 공시 양식은 법이 바뀔 때마다 달라지지만 수학은 달라지지 않습니다. 어디서 갈라야 할지, 이제 감이 오실 겁니다.`,
+    },
+    scenario: `모바일 게임사의 사업팀에서 급한 요청이 왔습니다. 신규 픽업 가챠의 **확률 공시표**를 게임 내 팝업과 공식 홈페이지, 그리고 자율규제 제출 양식 세 곳에 내야 합니다. 지금은 기획자가 엑셀로 계산해 세 곳에 복사-붙여넣기를 하는데, 지난 시즌 홈페이지 표와 인게임 표의 소수점이 달라 "확률 조작이냐"는 민원이 터졌습니다. 계산은 하나, 양식은 여럿 — 요구는 그게 전부입니다. 참고로 공시표가 틀리면 사과문은 사업팀이 쓰지만, 원인 규명 회의는 개발팀 자리에서 열립니다.`,
+    providedFiles: [],
+    legacyFiles: [
+      {
+        path: 'src/main/java/com/game/gacha/GachaSpec.java',
+        content: `package com.game.gacha;
+
+/**
+ * 가챠 확률 설정 (완성된 코드 — 그대로 사용).
+ * baseRate: 기본 확률 (0.01 = 1%)
+ * softPityStart: 이 회차 "다음"부터 확률 상승 (60이면 61회차부터 상승)
+ * rateStep: 상승 구간에서 회차당 더해지는 확률 (0.10 = 10%p)
+ * 확률은 100%를 넘지 않는다 (도달 시 그 회차가 천장).
+ */
+public record GachaSpec(double baseRate, int softPityStart, double rateStep) {
+}`,
+      },
+      {
+        path: 'src/main/java/com/game/gacha/DisclosureCalculator.java',
+        content: `package com.game.gacha;
+
+/**
+ * 확률 공시 계산기 (구현 대상).
+ *
+ * 메서드를 어떻게 나눌지는 여러분의 설계입니다.
+ * 단, "확률 수학"과 "공시표 문장 만들기"가 한 메서드에 섞이면
+ * 공시 양식이 추가되는 날(그날은 옵니다) 수학 코드를 다시 열게 됩니다 —
+ * 그리고 수학 코드를 여는 날마다 소수점이 달라질 위험도 함께 열립니다.
+ */
+public class DisclosureCalculator {
+
+    /** n회차의 획득 확률 (천장 규칙 반영). */
+    public double rateAt(GachaSpec spec, int attempt) {
+        // TODO 구현
+        throw new UnsupportedOperationException("아직 구현되지 않았습니다");
+    }
+
+    // TODO 누적 획득 확률, 천장 회차, 기대 시도 횟수, 공시표 생성을
+    //      어떤 단위로 나눌지 직접 설계하세요.
+}`,
+      },
+    ],
+    requirements: [
+      '검증 설정: baseRate 1%, softPityStart 60, rateStep 10%p. 회차별 확률은 1~60회 1%, 61회 11%, 62회 21% … 69회 91%, 70회 101%→100%로 캡. 따라서 천장은 70회차입니다 — 천장 회차는 하드코딩이 아니라 설정에서 계산되어야 합니다.',
+      '누적 획득 확률 F(n) = 1 − Π(1−pᵢ). 검증 수치(퍼센트, 소수 둘째 자리 반올림): F(10) = 9.56%, F(60) = 45.28%, F(65) = 92.33%, F(70) = 100.00%. 이 네 값이 정확히 재현되어야 합니다.',
+      '기대 시도 횟수 E = Σ P(n회 이상 필요) = Σ(1−F(n)) (n=0부터 천장−1까지). 검증 수치: 47.24회 (소수 둘째 자리 반올림). "1%니까 평균 100회"가 아닌 이유가 이 숫자 하나로 설명됩니다.',
+      '공시표 생성: 회차 구간별 확률(1~60회 1.00%, 61회 11.00%, …), 천장 회차, 누적 확률 이정표(10/60/65회), 기대 시도 횟수를 담은 표를 문자열로 출력합니다. 계산 결과(숫자)와 표 생성(문자열)은 분리되어, 새 공시 양식(자율규제 제출용 등)이 추가될 때 계산 코드는 열지 않아야 합니다.',
+      '표시 규칙: 모든 퍼센트는 소수 둘째 자리 반올림으로 표기하되, 내부 계산은 반올림 없이 이어 갑니다. 표시값을 다음 계산에 재사용하는 순간 세 양식의 소수점이 다시 어긋나기 시작합니다.',
+      '사업팀 추가 요청: "10연차(10회 묶음 뽑기) 보너스 확률도 공시에 넣어 주세요." (10연차 보너스의 규칙 자체가 아직 기획 확정 전입니다)',
+    ],
+    constraints: [
+      '난수 사용 금지 — 이 미션의 모든 계산은 결정적입니다. Random이 import되는 순간 공시는 감사 불능이 됩니다.',
+      '도메인 규칙: 확률 상승은 softPityStart 다음 회차부터, 100% 도달 회차가 천장입니다. 천장 이후 회차의 확률 질의는 정의역 밖입니다.',
+      '검증 수치의 반올림은 표시 단계에서만 수행합니다 (내부는 double 원값 유지).',
+      '외부 라이브러리 없이 순수 Java 17로 작성합니다.',
+    ],
+    learningGoals: [
+      '확률 수학(누적 곱, 기대값 합)을 정확한 코드로 옮기고 검증 수치로 스스로 검산하는 훈련',
+      '계산(순수 수학)과 표현(공시표 포맷)의 분리 — 양식은 여럿, 진실은 하나',
+      '표시용 반올림과 내부 정밀도의 구분이 "소수점 민원"을 구조적으로 막는다는 것 체감',
+      '기대값과 보장의 차이(63.4%의 진실)를 코드와 숫자로 설명할 수 있게 되기',
+    ],
+    hints: [
+      '"n회차의 확률", "n회차까지의 누적 확률", "천장 회차", "기대 시도 횟수", "공시표 문자열" — 이 다섯은 서로 다른 질문입니다. 각각의 입력과 출력을 종이에 적어 보면, 앞의 넷은 숫자를 다루고 마지막 하나만 문장을 다룬다는 것이 보입니다. 그 경계가 클래스의 경계입니다.',
+      '누적 확률은 "안 나올 확률의 곱"으로 쌓는 것이 실수 없이 안전합니다: miss = 1.0에서 시작해 회차마다 miss *= (1−pᵢ), F(n) = 1−miss. 기대값은 E = Σ(1−F(n))을 n=0부터 천장−1까지 — 공식을 코드에 옮기기 전에 F(70)=100%가 합의 마지막 항을 0으로 만드는지 손으로 확인해 보세요.',
+      '공시표 포맷터는 계산기의 "숫자 결과 객체"만 받게 하세요. 포맷터 안에서 rateAt을 다시 부르기 시작하면 양식마다 계산 경로가 갈라지고, 지난 시즌의 소수점 민원이 재림합니다.',
+    ],
+    hiddenCases: [
+      {
+        title: '천장이 없는 설정',
+        description:
+          'rateStep이 0이거나 음수인 설정이 들어오면 확률이 영원히 100%에 도달하지 못해, 천장 회차 계산이 무한 루프를 돌거나 공시표가 "천장: 없음"을 조용히 찍습니다. 확률형 아이템 규제에서 천장 없는 공시는 그 자체로 사고입니다. 좋은 방어: 설정 검증 계층에서 "유한한 회차 안에 100% 도달"을 확인하고, 불가능한 설정은 계산 전에 명시적으로 거부하세요.',
+      },
+      {
+        title: '기본 확률 0%',
+        description:
+          'baseRate 0 또는 음수, 1 초과 같은 설정 오류는 누적 곱을 그럴듯하게 통과해 "기대 시도 횟수 70.00회" 같은 정상적으로 보이는 오답을 만듭니다. 좋은 방어: 0 < baseRate ≤ 1, rateStep ≥ 0 범위 검증을 입구에 두세요. 공시는 틀린 값이 그럴듯할수록 위험합니다 — 아무도 검산하지 않으니까요.',
+      },
+      {
+        title: '0.30000000000000004%',
+        description:
+          '이진 부동소수점은 0.01 + 0.10 같은 십진수를 정확히 표현하지 못해, 원값을 그대로 문자열로 찍으면 공시표에 0.30000000000000004% 같은 숫자가 등장합니다. 커뮤니티는 이것을 버그가 아니라 조작의 증거로 읽습니다. 좋은 방어: 표시 단계의 반올림 규칙을 한 곳으로 모으고, 표시 문자열 검증 테스트(정확히 "11.00%"인가)를 두세요. 내부 정밀도와 표시 규칙의 분리가 이 미션의 숨은 주제입니다.',
+      },
+    ],
+    rubric: [
+      {
+        name: '도메인 규칙 정확성',
+        description: '회차별 확률, 천장 70회, F(10)/F(60)/F(65)/F(70), 기대 시도 47.24회가 검증 수치와 정확히 일치하는가.',
+        weight: 35,
+        visibleToLearner: true,
+      },
+      {
+        name: '계산과 표현의 분리',
+        description: '확률 수학과 공시표 포맷팅이 분리되어, 새 양식 추가 시 계산 코드를 수정하지 않아도 되는가. 포맷터가 계산 결과 객체만 소비하는가.',
+        weight: 25,
+        visibleToLearner: true,
+      },
+      {
+        name: '정밀도 규율',
+        description: '반올림이 표시 단계 한 곳에서만 일어나고 내부 계산은 원값을 유지하는가. 표시 문자열이 테스트로 고정되었는가.',
+        weight: 15,
+        visibleToLearner: true,
+      },
+      {
+        name: '테스트',
+        description: '검증 수치 네 개와 기대값, 천장 계산이 단위 테스트로 고정되었는가. 설정 검증(천장 없음, 범위 밖)이 다뤄졌는가.',
+        weight: 15,
+        visibleToLearner: true,
+      },
+      {
+        name: '모호한 요구사항 확인',
+        description: '10연차 보너스처럼 기획 미확정 요구를 임의 구현하지 않고 질문했거나 가정을 명시했는가.',
+        weight: 10,
+        visibleToLearner: false,
+      },
+    ],
+    explainTask: {
+      audience: '확률 공시 민원 답변을 쓰다 지친 사업팀 기획자 (수학은 엑셀 함수까지)',
+      prompt:
+        '기획자에게 설명하세요. (1) "1%인데 왜 100번 뽑아도 안 나오냐"는 민원에 쓸 수 있는 정확한 답 — 63.4%의 계산을 엑셀 셀 하나로 재현하는 법까지, (2) 천장 70회가 설정에서 어떻게 계산되는지 — 그래서 기획이 확률을 바꾸면 공시표의 어디까지 자동으로 따라오는지, (3) 왜 이제 세 양식의 소수점이 절대 어긋날 수 없는지 — 계산하는 곳이 한 곳뿐이라는 구조를 "원본 하나에 복사본 셋"으로. 마지막으로 다음 시즌 공시표 작성에 걸리는 시간을 말해 주세요.',
+    },
+    endings: [
+      {
+        grade: 'calm',
+        title: '소수점이 같은 세 개의 표',
+        teaser: '인게임, 홈페이지, 제출 양식의 숫자가 소수 둘째 자리까지 같다. 확률 민원 게시판의 화력이 옆 게임으로 옮겨 가고, 기획자는 엑셀 파일을 조용히 휴지통에 넣는다.',
+      },
+      {
+        grade: 'hotfix',
+        title: '시즌마다 열리는 계산기',
+        teaser: '표는 맞는다. 다만 새 양식이 올 때마다 포맷터가 아니라 계산기가 열리고, 열 때마다 검증 수치 네 개를 손으로 다시 확인하는 의식이 반복된다.',
+      },
+      {
+        grade: 'dawn',
+        title: '스크린샷 4만 공유',
+        teaser: '공시표의 0.30000000000000004%가 캡처되어 "조작 증거"로 4만 번 공유된다. 해명문의 "부동소수점 표현 오차"라는 문구는 사태를 조금도 진정시키지 못한다.',
+      },
+      {
+        grade: 'hidden',
+        title: '???',
+        teaser: '이 결말의 확률은 공시되지 않았습니다. 조건은 비공개입니다.',
+      },
+    ],
+  },
+
+  // =========================================================================
+  // Mission 25 — Stage 4 "레거시 길들이기" / 야구 (머니볼 오마주) / 리팩토링
+  // =========================================================================
+  {
+    id: 's4-saber-01',
+    stage: 4,
+    stageTitle: '레거시 길들이기',
+    missionType: '리팩토링',
+    difficulty: 'Normal',
+    scope: '여러 파일',
+    modes: ['developer'],
+    domain: '야구 · 세이버메트릭스',
+    domainEmoji: '⚾',
+    title: '타율은 볼넷을 모른다 — 스카우팅 리포트에 OPS 넣기',
+    estimatedMinutes: 140,
+    briefing: {
+      title: '숫자가 야구를 다시 읽은 해',
+      content: `### 타율이라는 오래된 안경
+
+한 세기 동안 타자의 가치는 타율이 말해 줬습니다. 안타 나누기 타수 — 간명하고, 중계 화면에 넣기 좋고, 그리고 중요한 것을 빠뜨립니다. **볼넷.** 타율의 분모(타수)에는 볼넷이 아예 없어서, 공을 끝까지 골라 1루에 걸어 나가는 능력이 타율에는 0으로 기록됩니다. 아웃당하지 않고 루에 나가는 것이 득점의 원료라면, 타율은 원료의 일부만 세는 저울인 셈입니다.
+
+### 빌 제임스와 2002년의 오클랜드
+
+1977년부터 통계학자 빌 제임스는 이 저울의 결함을 집요하게 파고들며 야구를 숫자로 다시 읽는 **세이버메트릭스**를 세웠습니다. 그리고 2002년, 메이저리그 최저 수준 연봉 총액의 오클랜드가 이 관점으로 팀을 짰습니다 — 타율은 평범해도 출루율(OBP)이 높은, 시장이 저평가한 선수들을 모아서. 그 시즌 20연승. 야구단 운영의 상식이 바뀐 해였고, 이 이야기는 책과 영화로 남았습니다. 핵심 지표는 셋입니다. **출루율 OBP** = (안타+볼넷+몸에 맞는 공) ÷ (타수+볼넷+몸에 맞는 공+희생플라이), **장타율 SLG** = 총루타 ÷ 타수, 그리고 둘의 합 **OPS**.
+
+### 30년 된 리포트를 존중하며 고치기
+
+여러분이 받을 시스템은 타율의 시대에 태어났습니다. 30년치 스카우팅 리포트가 이 코드의 출력 형식 그대로 구단 문서고에 쌓여 있고, 스카우터들은 그 형식으로 대화합니다. 새 지표를 넣자고 옛 리포트를 깨뜨리면, 잃는 것은 코드가 아니라 30년의 비교 가능성입니다. 기존 출력은 한 글자도 다르지 않게 — 특성화 테스트로 먼저 묶고, 새 관점은 그 옆에 새 체계로 세웁니다. 레거시 길들이기의 정석대로.`,
+    },
+    scenario: `프로야구단 '한성 피닉스' 전력분석팀의 스카우팅 리포트 시스템을 맡았습니다. 1990년대에 만들어진 이 시스템은 **타율과 홈런만으로 선수 등급을 매깁니다.** 새로 온 단장의 지시: "출루율·장타율·OPS를 리포트에 추가하세요. 단, **기존 등급과 리포트 형식은 절대 건드리지 마세요** — 30년치 리포트와 비교가 되어야 하고, 원로 스카우터들이 그 형식으로 삽니다." 시스템에는 흥미로운 선수가 하나 걸려 있습니다. 타율 .275라 "보통" 등급인데, 볼넷을 88개나 고르는 선수 — 새 지표는 그를 어떻게 읽을까요.`,
+    providedFiles: [],
+    legacyFiles: [
+      {
+        path: 'src/main/java/com/phoenix/scout/PlayerStat.java',
+        content: `package com.phoenix.scout;
+
+/**
+ * 선수 시즌 기록 (완성된 코드 — 그대로 사용).
+ * doubles=2루타, triples=3루타. sacFly는 1954년 이후 기록에만 존재한다(그 전엔 -1).
+ */
+public record PlayerStat(
+        String name,
+        int atBats,      // 타수
+        int hits,        // 안타
+        int doubles,     // 2루타
+        int triples,     // 3루타
+        int homeRuns,    // 홈런
+        int walks,       // 볼넷
+        int hitByPitch,  // 몸에 맞는 공
+        int sacFly       // 희생플라이 (-1 = 미집계 시대 기록)
+) {
+}`,
+      },
+      {
+        path: 'src/main/java/com/phoenix/scout/ScoutReport.java',
+        content: `package com.phoenix.scout;
+
+// ------------------------------------------------------
+//  스카우팅 리포트 v1.0  (1994 전산화 사업)
+//  등급 기준은 스카우트부 내규 7호. 30년째 그대로다.
+//  출력 형식 바꾸지 말것 - 문서고의 옛 리포트와 대조해야 함 (1998 메모)
+// ------------------------------------------------------
+public class ScoutReport {
+
+    /** 선수 한 명의 리포트 한 줄. */
+    public static String line(PlayerStat p) {
+        double avg = (double) p.hits() / p.atBats();
+        String grade;
+        if (avg >= 0.300) {
+            grade = "특급";
+        } else if (avg >= 0.280) {
+            grade = "우수";
+        } else if (avg >= 0.250) {
+            grade = "보통";
+        } else {
+            grade = "관망";
+        }
+        String tag = "";
+        if (p.homeRuns() >= 25) {
+            tag = " (거포)";
+        }
+        return String.format("%s: 타율 %s 홈런 %d -> %s%s",
+                p.name(), fmt3(avg), p.homeRuns(), grade, tag);
+    }
+
+    /** .275 형식 (앞자리 0 없이 소수 셋째 자리 반올림). */
+    static String fmt3(double v) {
+        return String.format("%.3f", v).substring(1);
+    }
+}`,
+      },
+      {
+        path: 'src/main/java/com/phoenix/ScoutOps.java',
+        content: `package com.phoenix;
+
+import com.phoenix.scout.PlayerStat;
+import com.phoenix.scout.ScoutReport;
+
+/** 리포트 출력 콘솔. 스카우트 회의 전에 실행한다. */
+public class ScoutOps {
+
+    public static void main(String[] args) {
+        PlayerStat a = new PlayerStat("박정확", 480, 132, 25, 3, 12, 88, 6, 5);
+        PlayerStat b = new PlayerStat("강스윙", 510, 153, 30, 2, 28, 20, 2, 6);
+
+        System.out.println(ScoutReport.line(a));
+        System.out.println(ScoutReport.line(b));
+        // 기대 출력 (동작 보존 기준):
+        // 박정확: 타율 .275 홈런 12 -> 보통
+        // 강스윙: 타율 .300 홈런 28 -> 특급 (거포)
+    }
+}`,
+      },
+    ],
+    requirements: [
+      '기존 리포트의 출력(형식·등급·태그)은 한 글자도 달라지면 안 됩니다. 수정 전에 두 검증 선수("박정확: 타율 .275 홈런 12 -> 보통", "강스윙: 타율 .300 홈런 28 -> 특급 (거포)")와 등급 경계(.300, .280, .250, 홈런 25)를 특성화 테스트로 먼저 고정하세요.',
+      '새 지표 체계를 별도 단위로 추가합니다: OBP = (안타+볼넷+몸에 맞는 공) ÷ (타수+볼넷+몸에 맞는 공+희생플라이), SLG = 총루타 ÷ 타수 (총루타 = 단타 + 2×2루타 + 3×3루타 + 4×홈런, 단타 = 안타−2루타−3루타−홈런), OPS = OBP + SLG. 표기는 기존 리포트와 같은 .390 형식(소수 셋째 자리 반올림)입니다.',
+      '검증 수치 — 박정확(타수 480, 안타 132, 2루타 25, 3루타 3, 홈런 12, 볼넷 88, 몸에 맞는 공 6, 희생플라이 5): OBP .390, SLG .415, OPS .805. 강스윙(타수 510, 안타 153, 2루타 30, 3루타 2, 홈런 28, 볼넷 20, 몸에 맞는 공 2, 희생플라이 6): OBP .325, SLG .531, OPS .857. 타율 순위(강스윙 우위)와 출루율 순위(박정확 우위)가 뒤집히는 것 — 그것이 이 지표의 존재 이유이며, 리뷰 노트에 한 줄로 언급하세요.',
+      '새 지표 리포트는 기존 line()과 분리된 새 출력(예: sabermetricLine)으로 제공하되, 계산 로직은 문자열 조립과 분리되어 단위 테스트 가능해야 합니다.',
+      '기존 등급 내규(타율 기준)와 새 지표는 섞지 마세요 — 새 지표 기반 등급은 스카우트부 합의 전입니다. 이번 릴리스는 "옛 등급 옆에 새 숫자"까지입니다.',
+      '전력분석팀 요청: "OPS 기준의 새 등급 컷도 곧 정할 거예요." (컷 값도, 기존 등급과의 병기 방식도 아직 회의 중입니다)',
+    ],
+    constraints: [
+      '리팩토링 미션입니다 — 기대 출력 2줄이 어긋나는 순간 그것은 개선이 아니라 30년치 문서고와의 단절입니다.',
+      '기존 코드의 주석(내규 7호, 1998 메모)은 보존하세요. 형식이 왜 얼어붙어 있는지에 대한 역사적 근거입니다.',
+      '도메인 규칙: OBP의 분모에는 희생플라이가 들어가고 타율의 분모에는 들어가지 않습니다. 이 차이를 임의로 "통일"하지 마세요 — 두 지표는 다른 질문에 답합니다.',
+      '외부 라이브러리 없이 순수 Java 17로 작성합니다.',
+    ],
+    learningGoals: [
+      '특성화 테스트로 기존 출력을 고정한 뒤 새 기능을 옆에 세우는, 레거시 확장의 안전 절차 재훈련',
+      '같은 원천 데이터에서 다른 질문(타율/출루율)에 답하는 지표들을 별도 단위로 설계하는 감각',
+      '표기 규칙(.275 형식) 같은 사소해 보이는 형식이 도메인에서는 비교 가능성이라는 자산임을 이해하기',
+      '세이버메트릭스라는 도메인 상식 — 지표는 중립이 아니라 관점이라는 것',
+    ],
+    hints: [
+      '첫 커밋은 ScoutOps의 두 줄을 그대로 붙인 특성화 테스트입니다. 등급 경계는 기록을 조작한 가상 선수로 만드세요 — 타율 정확히 .300(예: 타수 500 안타 150), .280, .250, 그리고 홈런 정확히 25. 경계 선수 네 명이면 내규 7호 전체가 그물에 들어옵니다.',
+      '새 지표 계산기는 PlayerStat만 받는 순수 클래스로 두고, ScoutReport.line()은 손대지 마세요. 손대고 싶어지는 순간(예: fmt3 재사용) — 복사가 결합보다 쌉니다. 형식 규칙이 우연히 같은 것과 같아야만 하는 것은 다릅니다. 다만 fmt3의 규칙(.415 표기)은 새 쪽에도 동일 스펙으로 필요하니 스펙 차원에서 테스트로 못박으세요.',
+      'OBP 분모(타수+볼넷+몸에 맞는 공+희생플라이)와 타율 분모(타수)를 헷갈리는 것이 이 도메인의 국민 버그입니다. 검증 수치 .390과 .275를 각각 손으로 한 번 재현해 본 뒤 코드로 옮기세요 — 박정확의 볼넷 88개가 분모와 분자에 동시에 들어가는 것을 눈으로 확인하는 것이 중요합니다.',
+    ],
+    hiddenCases: [
+      {
+        title: '타수 0의 선수',
+        description:
+          '개막전 대주자나 투수는 타수 0으로 시즌을 보낼 수 있습니다. 타율과 SLG의 분모가 0이 되어 NaN이 리포트에 그대로 인쇄되고, 등급 비교(NaN >= 0.300)는 조용히 false가 되어 "관망"이 찍힙니다 — 에러 없이 나온 그럴듯한 오답입니다. 좋은 방어: 타수 0을 계산 전에 감지해 "기록 부족"으로 명시 처리하고, 그 경우의 리포트 표기를 스펙 질문으로 되돌리세요.',
+      },
+      {
+        title: '1954년 이전의 기록',
+        description:
+          '희생플라이는 1954년부터 별도 집계됐습니다 — 그 전 시대 기록은 sacFly가 -1(미집계)로 옵니다. -1을 그대로 분모에 넣으면 OBP가 미세하게 부풀고, 아무도 눈치채지 못합니다. 좋은 방어: 미집계 값을 0으로 뭉개지도, 그대로 계산하지도 말고 "OBP 산출 불가(희생플라이 미집계 시대)"를 명시하세요. 원로 스카우터의 옛 기록 비교 요청은 반드시 옵니다.',
+      },
+      {
+        title: '안타가 타수보다 많은 기록',
+        description:
+          '전산 이관 오류로 안타 > 타수인 행이 들어오면 타율이 1.000을 넘고, 등급은 태연히 "특급"이 됩니다. 야구 규칙상 존재할 수 없는 기록이 시스템에서는 최고 등급이 되는 것입니다. 좋은 방어: 입력 검증 계층에서 도메인 불변식(안타 ≤ 타수, 2루타+3루타+홈런 ≤ 안타)을 확인하고, 위반 행은 등급을 매기지 말고 데이터 오류로 명시 격리하세요.',
+      },
+    ],
+    rubric: [
+      {
+        name: '특성화 테스트',
+        description: '수정 전에 기존 출력과 등급 경계(.300/.280/.250, 홈런 25)를 테스트로 고정했는가.',
+        weight: 30,
+        visibleToLearner: true,
+      },
+      {
+        name: '기존 동작 보존',
+        description: '기대 출력 2줄과 기존 등급 로직이 변경 후에도 완전히 동일한가. 테스트로 증명했는가.',
+        weight: 25,
+        visibleToLearner: true,
+      },
+      {
+        name: '새 지표의 분리와 정확성',
+        description: 'OBP/SLG/OPS가 별도 단위로 구현되어 검증 수치(.390/.415/.805, .325/.531/.857)와 정확히 일치하는가. 계산과 표기가 분리되었는가.',
+        weight: 25,
+        visibleToLearner: true,
+      },
+      {
+        name: '도메인 규칙의 존중',
+        description: '타율과 OBP의 분모 차이가 정확히 유지되는가. 새 지표가 기존 등급에 섞여 들지 않았는가.',
+        weight: 10,
+        visibleToLearner: true,
+      },
+      {
+        name: '모호한 요구사항 확인',
+        description: 'OPS 등급 컷과 병기 방식 같은 미확정 사항을 임의 확정하지 않고 질문했거나 가정을 명시했는가.',
+        weight: 10,
+        visibleToLearner: false,
+      },
+    ],
+    explainTask: {
+      audience: '타율의 시대를 40년 산 원로 스카우터 (박정확을 "보통"으로 분류한 내규 7호의 작성자)',
+      prompt:
+        '원로 스카우터에게 새 지표를 설명하세요. (1) 타율이 무엇을 놓치는지 — 박정확의 볼넷 88개가 타율에는 0으로, 출루율에는 그대로 잡히는 것을 그 선수의 실제 시즌으로, (2) OPS .805가 "보통" 등급과 어떻게 다른 이야기를 하는지, (3) 그리고 가장 중요한 것 — 내규 7호와 30년치 리포트는 한 글자도 바뀌지 않았다는 것. 새 숫자는 옛 저울을 부정하는 것이 아니라 다른 질문에 답하는 두 번째 저울이라는 점을, 상대의 40년을 존중하는 언어로 전하세요.',
+    },
+    endings: [
+      {
+        grade: 'calm',
+        title: '두 저울이 놓인 회의실',
+        teaser: '스카우트 회의 테이블에 옛 리포트와 새 지표가 나란히 놓인다. 박정확의 이적료 협상이 조용히 시작되고, 원로 스카우터가 처음으로 OBP 열에 형광펜을 긋는다.',
+      },
+      {
+        grade: 'hotfix',
+        title: '수기로 적는 OPS',
+        teaser: '지표는 나온다. 다만 미집계 시대 기록이 낀 비교 요청마다 분석원이 손으로 재계산하고, 그 엑셀의 이름이 "진짜최종_OPS_v7"이 된다.',
+      },
+      {
+        grade: 'dawn',
+        title: '문서고와의 단절',
+        teaser: '형식이 반 칸 어긋난 리포트가 배포되고, 30년치 문서와의 대조 작업이 전면 중단된다. 원로 스카우터의 항의 전화는 단장을 거치지 않고 전산실로 직접 온다.',
+      },
+      {
+        grade: 'hidden',
+        title: '???',
+        teaser: '이 결말의 스카우팅 리포트는 아직 작성되지 않았습니다. 조건은 비공개입니다.',
+      },
+    ],
+  },
+
+  // =========================================================================
+  // Mission 26 — Stage 10 "데이터가 흐르는 길" / 지도·측량 / 도메인 로직 구현
+  // =========================================================================
+  {
+    id: 's10-coords-01',
+    stage: 10,
+    stageTitle: '데이터가 흐르는 길',
+    missionType: '도메인 로직 구현',
+    difficulty: 'Normal',
+    scope: '여러 파일',
+    modes: ['developer'],
+    domain: '지도·측량',
+    domainEmoji: '🗺',
+    title: '하나의 위치, 세 개의 좌표 — 사본이 배달을 보낸 곳',
+    estimatedMinutes: 140,
+    briefing: {
+      title: '지구는 완벽한 공이 아니라서',
+      content: `### 좌표계가 여러 개인 이유
+
+지구는 완벽한 공이 아니라 적도가 불룩한 타원체이고, 그 표면을 평평한 지도와 화면에 옮기려면 어딘가를 반드시 일그러뜨려야 합니다. 그래서 좌표계는 하나가 아닙니다. GPS가 쓰는 전 지구 기준의 위도·경도(WGS84), 나라마다 자기 땅이 가장 덜 일그러지게 투영한 평면 좌표(한국의 지적도가 쓰는 TM 계열), 그리고 사람이 부르는 주소. **같은 지점이 시스템 안에서 세 가지 이름으로 삽니다.** 측량의 역사는 곧 이 변환표를 만든 역사입니다 — 삼각점을 심으며 국토를 잰 대삼각측량부터, 단위 하나 어긋나 화성 궤도선을 잃은 1999년의 사고(Mars Climate Orbiter)까지, 표현이 여럿인 곳에는 언제나 불일치의 함정이 있었습니다.
+
+### 셋 중 누가 진실인가
+
+마틴 클레프만의 《데이터 중심 애플리케이션 설계》의 렌즈로 보면 이 문제의 구조는 익숙합니다. TM 좌표와 그리드 주소는 위경도에서 **계산으로 파생된 데이터**입니다. 파생 데이터는 진실을 주장할 자격이 없고, 원본이 바뀌면 다시 계산되어야 합니다. 사고는 언제나 파생이 원본 행세를 할 때 납니다 — 가게가 이전해 위경도는 바뀌었는데 지적 좌표 캐시는 옛 자리를 가리키고, 배달 기사는 사본을 믿고 빈 건물 앞에 섭니다.
+
+### 늦는 사본과 거짓말하는 사본
+
+파생 좌표가 원본보다 몇 초 늦는 것은 설계된 성질입니다. 위험한 것은 갱신 이벤트를 놓치고도 모르는 사본, 순서가 뒤집힌 채 적용된 사본, 그리고 누군가 직접 덮어써 원본과 영영 갈라선 사본입니다. 이번 미션은 세 개의 좌표가 한 진실의 세 그림자로 살게 만드는 일입니다 — 그림자가 본체를 앞서 걷기 시작하면, 배달은 엉뚱한 골목에서 끝납니다.`,
+    },
+    scenario: `배달 플랫폼 '가까움'의 픽업 지점 관리 시스템을 만듭니다. 가게마다 위치가 세 표현으로 저장됩니다 — 지도 핀을 찍는 **위경도(원본)**, 지적 조회용 **TM 평면좌표**, 기사 안내용 **그리드 주소**. 지난달 사고: 한 치킨집이 두 블록 이전하며 지도 핀은 옮겼는데 TM 캐시와 그리드 주소가 옛 값으로 남아, 기사 42명이 빈 가게 앞에서 전화를 돌렸습니다. 좌표 변환식은 지도팀 엔진이 제공합니다. 여러분의 일은 변환이 아니라 **흐름**입니다 — 원본이 바뀌면 파생이 반드시, 순서대로, 따라오게 만드는 것.`,
+    providedFiles: [
+      {
+        path: 'src/main/java/com/near/geo/GeoConverter.java',
+        content: `package com.near.geo;
+
+/**
+ * 좌표 변환 엔진 (지도팀 소유 — 엔진입니다. 수정/재구현 금지, 그대로 사용).
+ * 이 미션의 변환식은 검산 가능하도록 단순화한 가상 선형식입니다.
+ * 실제 TM 투영 수학이 아님을 밝혀 둡니다 (실제로는 타원체 투영 계산).
+ *   X = round((경도 − 124.0) × 100000)  [m]
+ *   Y = round((위도 − 33.0) × 110000)   [m]
+ *   그리드 주소 = "그리드 " + (X/1000 내림) + "-" + (Y/1000 내림)
+ */
+public class GeoConverter {
+
+    /** TM 평면좌표 (m 단위 정수). */
+    public record Tm(long x, long y) {
+    }
+
+    public Tm toTm(double lat, double lon) {
+        long x = Math.round((lon - 124.0) * 100000);
+        long y = Math.round((lat - 33.0) * 110000);
+        return new Tm(x, y);
+    }
+
+    public String toGrid(Tm tm) {
+        return "그리드 " + (tm.x() / 1000) + "-" + (tm.y() / 1000);
+    }
+}`,
+      },
+      {
+        path: 'src/main/java/com/near/infra/GeoEventLog.java',
+        content: `package com.near.infra;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Consumer;
+
+/**
+ * 위치 변경 이벤트 로그 (인프라팀 제공 — 엔진입니다. 수정/재구현 금지, 그대로 사용).
+ * append-only. 이벤트마다 전역 순번(seq)이 붙고 구독자에게 순서대로 전달된다.
+ * 놓친 구간은 replayFrom(seq)으로 다시 받는다.
+ */
+public class GeoEventLog {
+
+    /** 위치 변경 이벤트: 가게 ID와 새 위경도. */
+    public record Moved(long seq, String storeId, double lat, double lon) {
+    }
+
+    private final List<Moved> log = new ArrayList<>();
+    private final List<Consumer<Moved>> subscribers = new ArrayList<>();
+    private long seq = 0;
+
+    public long append(String storeId, double lat, double lon) {
+        seq++;
+        Moved e = new Moved(seq, storeId, lat, lon);
+        log.add(e);
+        for (Consumer<Moved> sub : subscribers) {
+            sub.accept(e);
+        }
+        return seq;
+    }
+
+    public void subscribe(Consumer<Moved> listener) {
+        subscribers.add(listener);
+    }
+
+    public List<Moved> replayFrom(long fromSeq) {
+        return log.stream().filter(e -> e.seq() > fromSeq).toList();
+    }
+}`,
+      },
+    ],
+    legacyFiles: [
+      {
+        path: 'src/main/java/com/near/store/StoreLocationService.java',
+        content: `package com.near.store;
+
+/**
+ * 픽업 지점 위치 서비스 (구현 대상).
+ *
+ * 설계 원칙 세 가지가 여러분의 몫입니다.
+ * 1) 진실은 위경도 원본 하나 — TM과 그리드 주소는 파생이며, 원본 저장소만이 쓰기를 받는다.
+ * 2) 파생 갱신은 GeoEventLog의 이벤트를 순번대로 적용해서만 일어난다.
+ * 3) 파생 저장소는 언제든 원본에서 재구축 가능해야 한다 (재동기화 경로 필수).
+ * (원본/파생 저장소의 구조와 경계 인터페이스는 여러분이 설계합니다.)
+ */
+public class StoreLocationService {
+
+    // TODO 생성자에서 무엇을 조립할지 설계하세요.
+
+    /** 가게 이전 처리: 원본 갱신 + 이벤트 발행. */
+    public void move(String storeId, double lat, double lon) {
+        throw new UnsupportedOperationException("아직 구현되지 않았습니다");
+    }
+
+    /** 기사 안내 화면용 조회. App.java의 기대 출력 형식과 일치해야 합니다. */
+    public String riderView(String storeId) {
+        throw new UnsupportedOperationException("아직 구현되지 않았습니다");
+    }
+}`,
+      },
+      {
+        path: 'src/main/java/com/near/App.java',
+        content: `package com.near;
+
+import com.near.store.StoreLocationService;
+
+/**
+ * 실행 진입점. 이 파일은 엔진입니다. 그대로 사용하세요.
+ * 구현이 끝나면 아래 주석의 기대 출력과 정확히 일치해야 합니다.
+ */
+public class App {
+
+    public static void main(String[] args) {
+        // TODO(학습자): 서비스를 조립하고 아래 시나리오를 실행하세요.
+        // StoreLocationService svc = ...;
+        // svc.move("CHK-42", 37.5665, 126.9780);   // 치킨집 등록 (서울)
+        // System.out.println(svc.riderView("CHK-42"));
+        // svc.move("CHK-42", 35.1796, 129.0756);   // 부산으로 이전
+        // System.out.println(svc.riderView("CHK-42"));
+
+        // ===== 기대 출력 1: 등록 직후 =====
+        // [CHK-42] 위경도 37.5665,126.9780 / TM 297800,502315 / 그리드 297-502
+
+        // ===== 기대 출력 2: 이전 반영 후 =====
+        // [CHK-42] 위경도 35.1796,129.0756 / TM 507560,239756 / 그리드 507-239
+    }
+}`,
+      },
+    ],
+    requirements: [
+      '진실의 단일 출처: 위경도 원본 저장소만 쓰기를 받습니다. TM 좌표와 그리드 주소 저장소는 원본을 직접 쓰는 코드가 없어야 하며, 오직 이벤트 적용과 재구축으로만 갱신됩니다.',
+      '검증 시나리오: CHK-42를 위경도 37.5665,126.9780으로 등록하면 파생값은 TM 297800,502315 / 그리드 297-502. 이후 35.1796,129.0756으로 이전하면 TM 507560,239756 / 그리드 507-239. App.java의 기대 출력 두 줄과 정확히 일치해야 합니다.',
+      '순서 보장: 파생 구독자는 이벤트를 순번(seq) 순서로만 적용합니다. 순번 검증에 걸린 이벤트(구멍, 중복)는 적용하지 말고 보류 또는 재동기화를 트리거해야 하며, 이 동작이 테스트로 증명되어야 합니다.',
+      '재동기화: 구독이 끊겼다 재개된 파생 저장소가 "마지막 적용 순번"부터 replayFrom으로 따라잡는 경로, 그리고 파생 전체를 버리고 원본에서 재구축하는 경로 — 두 가지가 모두 코드로 존재해야 합니다. 따라잡은 뒤의 값은 원본에서 즉시 변환한 값과 일치해야 합니다.',
+      '기사 화면(riderView)은 파생 저장소를 읽습니다. 파생이 원본보다 뒤처져 있는 동안의 표시 정책(옛 값? "동기화 중"?)을 정하고 그 근거를 리뷰 노트에 남기세요.',
+      '운영팀 문의: "그리드 주소 자릿수를 지역별로 다르게 하자는 얘기가 있어요." (표준화 회의가 진행 중이라 규칙이 언제 어떻게 바뀔지는 아무도 모릅니다)',
+    ],
+    constraints: [
+      'GeoConverter.java와 GeoEventLog.java, App.java는 엔진 코드입니다. 수정·재구현 금지, 그대로 사용하세요. 변환식이 학습용 가상식임은 엔진 주석에 이미 명시되어 있습니다.',
+      '도메인 규칙: 파생 좌표(TM, 그리드)를 입력으로 받아 원본을 갱신하는 역방향 쓰기를 금지합니다. 역변환의 반올림 오차가 원본을 오염시킵니다.',
+      '파생 저장소는 언제든 폐기 후 재구축 가능해야 합니다 — 재구축 결과가 원본과 일치함을 테스트로 보이세요.',
+      '외부 라이브러리 없이 순수 Java 17로 작성합니다.',
+    ],
+    learningGoals: [
+      '원본과 파생 데이터의 비대칭 — 쓰기는 한 곳, 나머지는 계산 결과라는 원칙을 좌표 도메인으로 체감',
+      '순번 검증·보류·재동기화로 스트림의 3대 사고(역전, 유실, 중복)를 방어하는 구조 연습 (S10 심화)',
+      '역방향 쓰기(파생→원본)가 왜 금지인지 — 변환 왕복의 반올림 오차와 진실의 오염 이해',
+      '지연을 숨기지 않고 표시 정책으로 다루는 감각 — 사본의 신선도는 사용자 경험의 일부다',
+    ],
+    hints: [
+      '저장소를 세 개 만들되 쓰기 메서드는 원본에만 두세요. 파생 저장소의 공개 인터페이스에 put이 존재하는 순간, 언젠가 누군가(대개 3개월 뒤의 본인) 그것을 호출합니다. 파생의 갱신 창구는 이벤트 리스너 하나뿐이어야 합니다.',
+      '순번 검증은 재고 미션과 같은 두 줄입니다 — 기대 순번(마지막+1)보다 크면 구멍(재동기화), 작거나 같으면 이미 본 것(버림). 이 규칙을 파생 저장소마다 복사하지 말고, "순번을 지키는 구독자"라는 공통 부품으로 한 번만 만드세요.',
+      '재구축은 사실 가장 쉬운 코드입니다: 원본 전체를 훑으며 변환기를 다시 돌리는 것. 어려운 것은 재구축 중의 조회 처리입니다 — 재구축 완료 순번을 기록해 두면 "어느 시점의 진실까지 반영됐는가"를 답할 수 있고, 그것이 기대 출력의 신선도 표시로 이어집니다.',
+    ],
+    hiddenCases: [
+      {
+        title: '늦게 도착한 이전 이벤트',
+        description:
+          '가게가 A→B→C로 두 번 이전했는데 B 이벤트가 지연되어 C보다 늦게 도착하면, 도착 순서대로 적용하는 파생 저장소의 최종 주소는 B — 기사 42명이 다시 빈 가게 앞에 섭니다. 좋은 방어: 적용 전 순번 검증으로 과거 이벤트를 걸러 내세요. 도착 순서는 사실이 아니고 순번이 사실이라는 것, 이 미션에서 두 번째로 만나는 진실입니다.',
+      },
+      {
+        title: '파생을 직접 고친 손',
+        description:
+          '"급해서" 운영자가 TM 캐시를 수동으로 덮어쓰면 그 순간은 맞아 보이지만, 다음 이벤트나 재구축이 그 수정을 소리 없이 지우거나 — 더 나쁘게 — 원본과 영영 갈라선 채 살아남습니다. 좋은 방어: 파생 저장소에 외부 쓰기 경로 자체를 만들지 말고, 급한 수정은 원본 갱신(move)으로만 가능하게 강제하세요. 편의 기능이 정합성의 뒷문이 됩니다.',
+      },
+      {
+        title: '역변환으로 원본 갱신',
+        description:
+          '지적 시스템에서 TM 좌표만 받은 신규 입점을 역변환해 위경도 원본으로 넣고, 그 원본을 다시 TM으로 변환하면 — 반올림이 왕복하며 원래 TM과 1m 어긋난 값이 나올 수 있습니다. 갱신할 때마다 좌표가 조금씩 떠내려가는 드리프트의 시작입니다. 좋은 방어: 역방향 쓰기를 금지하고, 원본이 없는 데이터는 "원본 미확보" 상태로 명시해 지도 핀 확정 절차를 태우세요. 화성 궤도선의 교훈은 변환의 방향에도 적용됩니다.',
+      },
+    ],
+    rubric: [
+      {
+        name: '단일 진실 출처 구조',
+        description: '쓰기가 원본 한 곳으로 강제되고 파생 직접 쓰기·역방향 쓰기 경로가 없는가. 재구축 경로가 존재하고 검증되는가.',
+        weight: 30,
+        visibleToLearner: true,
+      },
+      {
+        name: '이벤트 흐름의 정합성',
+        description: '순번 검증·보류·재동기화가 구현되고 역전/유실/중복 시나리오가 테스트로 증명되는가.',
+        weight: 25,
+        visibleToLearner: true,
+      },
+      {
+        name: '도메인 규칙 정확성',
+        description: '두 기대 출력(TM·그리드 값 포함)이 정확히 일치하는가. 변환은 엔진에 위임되고 도메인에 수식이 새지 않는가.',
+        weight: 20,
+        visibleToLearner: true,
+      },
+      {
+        name: '지연의 설계',
+        description: '파생 지연 중의 표시 정책이 명시적으로 설계·문서화되었는가. 신선도(반영 순번)를 답할 수 있는가.',
+        weight: 15,
+        visibleToLearner: true,
+      },
+      {
+        name: '모호한 요구사항 확인',
+        description: '그리드 주소 규칙 변경 가능성 같은 미확정 사항을 임의 확정하지 않고 질문했거나 가정을 명시했는가.',
+        weight: 10,
+        visibleToLearner: false,
+      },
+    ],
+    explainTask: {
+      audience: '빈 가게 앞에서 42통의 전화를 받았던 배달 기사 대표 (비개발자, 시스템 불신 보유)',
+      prompt:
+        '기사 대표에게 설명하세요. (1) 치킨집 사건이 왜 났는지 — 주소록 원본은 고쳤는데 벽에 붙은 복사본 두 장을 안 바꾼 사무실에 빗대어, (2) 이제는 복사본이 스스로를 갱신하고, 놓친 갱신은 따라잡고, 의심스러우면 원본에서 통째로 다시 베낀다는 것, (3) 그래도 몇 초의 시차는 있을 수 있는데 그때 화면에 무엇이 뜨는지 — 옛 주소가 아니라 "동기화 중"이라는 정직한 표시라는 것. 기사님들이 다음에 이상한 핀을 보면 무엇을 하면 되는지로 마무리하세요.',
+    },
+    endings: [
+      {
+        grade: 'calm',
+        title: '핀과 현관이 일치하는 날들',
+        teaser: '이전 성수기(2월, 9월)가 지나가도 오배달 제보가 없다. 기사 커뮤니티의 "가까움 핀 믿지 마라" 게시글이 더는 갱신되지 않는다.',
+      },
+      {
+        grade: 'hotfix',
+        title: '동기화 중이 오래 걸리는 가게',
+        teaser: '불일치는 사라졌다. 다만 재동기화가 밀리는 피크 시간대마다 "동기화 중" 뱃지가 길게 붙고, 그 시간엔 기사들이 습관처럼 가게에 전화를 건다.',
+      },
+      {
+        grade: 'dawn',
+        title: '두 블록 옆의 42통',
+        teaser: '지연 이벤트가 순번 검증 없이 적용된 저녁, 옛 좌표가 최신을 덮어쓴다. 빈 가게 앞의 전화가 재현되고, 이번 사고 채널의 스크린샷에는 여러분의 서비스 이름이 찍혀 있다.',
+      },
+      {
+        grade: 'hidden',
+        title: '???',
+        teaser: '이 결말의 좌표는 아직 측량되지 않았습니다. 조건은 비공개입니다.',
+      },
+    ],
+  },
+
+  // =========================================================================
+  // Mission 27 — Stage 2 "인터페이스는 계약" / 항해 규칙 (COLREG) / 도메인 로직 구현
+  // =========================================================================
+  {
+    id: 's2-colreg-01',
+    stage: 2,
+    stageTitle: '인터페이스는 계약',
+    missionType: '도메인 로직 구현',
+    difficulty: 'Normal',
+    scope: '단일 파일',
+    modes: ['developer'],
+    domain: '항해 · 해상충돌예방규칙',
+    domainEmoji: '⛵',
+    title: '바다의 프로토콜 — 누가 피할 것인가',
+    estimatedMinutes: 110,
+    briefing: {
+      title: '규칙이 없던 바다의 충돌들',
+      content: `### 증기선이 가져온 혼돈
+
+바람에 묶여 있던 범선의 시대에는 배들의 항로가 어느 정도 예측 가능했습니다. 그런데 19세기, 바람과 무관하게 어느 방향으로든 달리는 증기선이 등장하자 바다 위 충돌이 급증합니다. 안개 속에서 마주친 두 배가 서로 "상대가 피하겠지" 하며 직진하다 부딪히는 사고가 반복되자, 각국의 관습이던 항법 규칙은 국제 협약으로 성문화되기 시작했고, 오늘날 전 세계 모든 선박이 따르는 **국제해상충돌예방규칙(COLREG, 1972년 협약)**으로 정리됐습니다.
+
+### 상태를 공개하라 — 등화와 형상물
+
+이 규칙의 설계에서 아름다운 부분은 판정 이전에 있습니다. 배들은 밤에는 등화의 색과 배치로, 낮에는 돛대에 올린 형상물로 **자신의 상태를 서로에게 공개합니다** — "나는 조종이 불가능하다", "나는 어로 중이다", "나는 동력선이다". 상대의 내부 사정(엔진이 왜 죽었는지)은 몰라도 됩니다. 공개된 상태만 보고 누구나 같은 판정을 내릴 수 있게 한 것 — 소프트웨어 설계자라면 여기서 익숙한 냄새를 맡을 겁니다. 구현은 숨기고 계약만 공개한다. 등화는 바다의 인터페이스입니다.
+
+### 판정은 프로토콜이다
+
+두 배가 만나면 규칙은 역할을 배정합니다. **피항선(give-way)**은 크고 이르게 피하고, **유지선(stand-on)**은 침로와 속력을 유지합니다 — 둘 다 피하려 들면 서로의 회피가 상쇄되기 때문에, 한쪽의 "가만히 있을 의무"까지 규칙인 것입니다. 마주치면 둘 다 우현으로, 횡단이면 상대를 우현에 둔 쪽이 피하고, 추월선은 언제나 피합니다. 조종 능력이 다른 배들 사이에는 계층이 있어 자유로운 쪽이 부자유한 쪽을 피합니다. 이 판정 체계를 코드의 계약으로 옮기는 것이 이번 미션입니다 — 단, 실제 규칙의 단순화 버전임을 처음부터 분명히 해 둡니다.`,
+    },
+    scenario: `해양 교육 기업이 **항해사 훈련 시뮬레이터의 항법 판정 모듈**을 의뢰했습니다. 훈련생이 만든 조우 상황에서 "누가 피항선이고 누가 유지선인가, 권고 동작은 무엇인가"를 판정해 채점에 쓰는 기능입니다. 교육팀이 못을 박았습니다 — **"이 판정기는 교육용 단순화 모델입니다. 실제 COLREG 전체가 아니라, 아래 규칙 표만 구현하세요. 표에 없는 상황을 아는 척하는 것이 최악입니다."** 기하 계산(방위·침로에서 조우 유형을 알아내는 일)은 시뮬레이터 본체가 하고, 여러분은 조우 유형과 선박 상태를 입력으로 받습니다.`,
+    providedFiles: [],
+    legacyFiles: [
+      {
+        path: 'src/main/java/com/marine/rules/Encounter.java',
+        content: `package com.marine.rules;
+
+/**
+ * 조우 상황 입력 (완성된 코드 — 그대로 사용).
+ * type: HEAD_ON(마주침) / CROSSING(횡단) / OVERTAKING(추월)
+ * CROSSING일 때 otherOnStarboardOfA = true면 A가 상대(B)를 자기 우현에 보고 있다.
+ * OVERTAKING일 때 aIsOvertaking = true면 A가 추월하는 쪽이다.
+ */
+public record Encounter(
+        String type,
+        Vessel a,
+        Vessel b,
+        boolean otherOnStarboardOfA,
+        boolean aIsOvertaking
+) {
+
+    /**
+     * 선박 (완성된 코드 — 그대로 사용).
+     * category: NUC(조종불능) / RAM(조종제한) / FISHING(어로 종사) /
+     *           SAILING(범선) / POWER(동력선)
+     * 등화·형상물로 서로에게 공개되는 상태가 바로 이 category다.
+     */
+    public record Vessel(String name, String category) {
+    }
+}`,
+      },
+      {
+        path: 'src/main/java/com/marine/rules/RightOfWayJudge.java',
+        content: `package com.marine.rules;
+
+/**
+ * 항법 우선권 판정기 (구현 대상).
+ *
+ * 규칙 표(요구사항)의 우선순위가 판정의 전부입니다:
+ *   1) 추월 상황이면 선종과 무관하게 추월선이 피항선 (규칙 13의 정신)
+ *   2) 선종 계층이 다르면 계층이 낮은(자유로운) 쪽이 피항선
+ *   3) 같은 동력선끼리: 마주침 -> 양쪽 모두 우현 변침 / 횡단 -> 상대를 우현에 본 배가 피항선
+ * 이 우선순위가 if의 순서가 아니라 읽을 수 있는 체계로 표현되는 것이 이 미션의 설계 과제입니다.
+ * (판정 결과를 담을 타입과 규칙의 계약은 여러분이 설계합니다.)
+ */
+public class RightOfWayJudge {
+
+    /** 조우 판정. 요구사항의 검증 케이스와 정확히 일치해야 합니다. */
+    public String judge(Encounter encounter) {
+        // TODO 반환 타입 설계부터 여러분의 몫입니다 (String은 자리 표시).
+        throw new UnsupportedOperationException("아직 구현되지 않았습니다");
+    }
+}`,
+      },
+    ],
+    requirements: [
+      '이 미션의 규칙 표(단순화 스펙 — 실제 COLREG의 교육용 축약본이며, 그 사실이 판정 결과 문구에도 명시되어야 합니다): ① 추월(OVERTAKING) 상황이면 선종과 무관하게 추월하는 배가 피항선, 추월당하는 배가 유지선. ② 추월이 아닌 상황에서 두 배의 선종 계층이 다르면 계층이 낮은 쪽이 피항선. 계층은 높은 순서로 NUC(조종불능) > RAM(조종제한) > FISHING(어로) > SAILING(범선) > POWER(동력선). ③ 동력선끼리 마주침(HEAD_ON)이면 피항/유지 구분 없이 양쪽 모두 우현 변침. ④ 동력선끼리 횡단(CROSSING)이면 상대를 자기 우현에 보는 배가 피항선, 상대는 유지선(침로·속력 유지).',
+      '검증 케이스 1 (횡단): 동력선 A가 동력선 B를 우현에 봄 → A 피항선(대각도 우현 변침 권고), B 유지선(침로·속력 유지). 검증 케이스 2 (계층): 동력선 A와 어로선 B의 횡단 → 방위와 무관하게 A 피항선 (계층 규칙이 횡단 규칙에 우선).',
+      '검증 케이스 3 (추월의 우선): 범선 A가 동력선 B를 추월 → A 피항선. 계층상 범선이 동력선보다 위지만, 추월 규칙은 계층에 우선합니다 — 이 역전이 정확히 구현되어야 하고, 테스트 이름에 그 사실이 드러나야 합니다. 검증 케이스 4 (마주침): 동력선끼리 HEAD_ON → 결과에 피항/유지 대신 "양측 우현 변침"이 명시.',
+      '판정 결과는 문자열 조립이 아니라 의미 있는 타입(누가 피항선인지, 권고 동작, 적용된 규칙)으로 먼저 만들어지고, 화면 문구는 그 타입에서 파생되어야 합니다. 채점 모듈과 훈련생 화면이 같은 판정 타입을 다른 문구로 소비할 예정입니다.',
+      '규칙의 우선순위(추월 > 계층 > 대등 상황 규칙)가 코드에서 읽히는 체계 — 예컨대 순서를 가진 규칙 목록으로 — 로 표현되어야 합니다. 새 규칙(예: 흘수제약선)이 추가될 때 기존 규칙 코드를 수정하지 않고 목록에 끼워 넣을 수 있어야 합니다.',
+      '교육팀 추가 문의: "시계가 나쁠 때(무중) 규칙도 넣을 수 있나요? 그때는 유지선 개념이 없어진다던데요." (무중 항법은 판정 구조 자체가 다릅니다 — 이번 범위에 넣을지, 시계 제한의 기준을 무엇으로 할지 아직 결정되지 않았습니다)',
+    ],
+    constraints: [
+      'Encounter.java는 완성 코드입니다. 조우 유형과 방위 관계는 입력으로 주어지며, 침로·방위각의 기하 계산은 이 미션의 범위 밖입니다.',
+      '도메인 규칙: 이 판정기는 교육용 단순화 모델입니다. 실제 COLREG에는 여기 없는 규칙(협수로, 통항분리대, 흘수제약선, 무중 항법 등)이 많으며, 그 사실을 코드 주석과 판정 결과 문구 양쪽에 명시하세요. 실제 항해의 판단을 대체하지 않습니다.',
+      '규칙 표 밖의 입력 조합을 그럴듯한 판정으로 때우는 것을 금지합니다 — 모르는 상황은 모른다고 답하는 판정기여야 합니다.',
+      '외부 라이브러리 없이 순수 Java 17로 작성합니다.',
+    ],
+    learningGoals: [
+      '물리 세계의 프로토콜(항법 규칙)을 코드의 계약으로 옮기며, "상태 공개 + 공통 규칙 = 분산 협조"라는 인터페이스의 본질 이해',
+      '우선순위가 있는 규칙 체계를 if 순서가 아니라 명시적 구조(순서 있는 규칙 목록)로 표현하는 연습',
+      '판정 결과를 문자열이 아니라 도메인 타입으로 설계해, 여러 소비자(채점·화면)가 같은 진실을 공유하게 하기',
+      '단순화 모델의 경계를 코드와 문구에 정직하게 새기는 습관 — 아는 척하지 않는 시스템이 안전한 시스템',
+    ],
+    hints: [
+      '규칙 하나를 "이 조우에 적용되는가? 적용된다면 판정은?"이라는 두 질문으로 요약해 보세요. 그 두 질문이 규칙 계약(인터페이스)이고, 판정기는 우선순위 순서로 규칙 목록을 훑다 첫 번째로 적용되는 규칙의 답을 받는 구조가 됩니다 — 추월 규칙을 목록 맨 앞에 두면 "계층에 우선"이 코드 구조로 증명됩니다.',
+      '판정 결과 타입에는 최소 세 가지가 필요합니다 — 역할 배정(A/B 중 누가 피항선인지, 혹은 양측 조치), 권고 동작, 그리고 어느 규칙이 적용됐는지. 세 번째가 없으면 훈련생이 "왜?"를 물을 때 시스템이 침묵합니다. 교육용 판정기에서 근거는 결과의 절반입니다.',
+      '마주침의 "양측 우현 변침"은 피항/유지 이분법에 들어가지 않습니다. 역할 배정을 enum으로 설계할 때 GIVE_WAY_A / GIVE_WAY_B 둘만 만들면 이 케이스에서 설계가 부러집니다 — BOTH_ACT 같은 세 번째 값의 필요를 검증 케이스 4가 미리 알려 주고 있습니다.',
+    ],
+    hiddenCases: [
+      {
+        title: '미지의 선종 문자열',
+        description:
+          '시뮬레이터 편집기에서 "FISHING "(공백)이나 신규 "DREDGER" 같은 미등록 선종이 넘어오면, 계층 조회가 조용히 실패해 엉뚱한 기본 판정이 나갈 수 있습니다. 훈련 시뮬레이터의 오판정은 그대로 훈련생의 몸에 새겨집니다. 좋은 방어: 선종을 문자열 비교가 아니라 enum 변환으로 받고, 변환 불가 입력은 판정을 거부하며 "미지의 선종"을 명시하세요.',
+      },
+      {
+        title: '어로선이 어로선을 추월할 때',
+        description:
+          '같은 계층의 두 배가 추월 상황이면 — 계층 규칙만으로 판정하려는 코드는 "동순위, 판정 불가"로 죽거나 임의의 한쪽을 고릅니다. 정답은 규칙 표에 이미 있습니다: 추월 규칙이 계층보다 먼저 적용되므로 추월선이 피항선입니다. 좋은 방어: 우선순위를 코드 구조(규칙 목록의 순서)로 강제하고, "같은 계층 + 추월"을 테스트 케이스로 못박으세요. 규칙의 순서가 곧 스펙입니다.',
+      },
+      {
+        title: '자기 자신과의 조우',
+        description:
+          '편집기 버그로 A와 B가 같은 선박 ID로 들어오는 조우가 만들어질 수 있습니다. 그대로 판정하면 "A는 A를 피하라"는 명령이 훈련 화면에 뜹니다 — 웃긴 출력이지만, 검증 없는 입력 신뢰의 증거로는 웃기지 않습니다. 좋은 방어: 판정 전 입력 무결성(서로 다른 두 선박, 유효한 조우 유형과 플래그 조합)을 확인하고 위반은 명시적으로 거부하세요.',
+      },
+    ],
+    rubric: [
+      {
+        name: '도메인 규칙 정확성',
+        description: '검증 케이스 4개(횡단, 계층, 추월의 계층 역전, 마주침 양측 조치)가 규칙 표와 정확히 일치하는가.',
+        weight: 30,
+        visibleToLearner: true,
+      },
+      {
+        name: '규칙 체계의 표현',
+        description: '우선순위(추월 > 계층 > 대등 규칙)가 if 순서가 아니라 읽고 확장할 수 있는 구조로 표현되었는가. 새 규칙 추가가 목록 등록으로 끝나는가.',
+        weight: 25,
+        visibleToLearner: true,
+      },
+      {
+        name: '판정 결과의 타입 설계',
+        description: '역할 배정·권고 동작·적용 규칙이 도메인 타입으로 설계되고, 마주침의 양측 조치가 이분법에 억지로 구겨지지 않았는가.',
+        weight: 20,
+        visibleToLearner: true,
+      },
+      {
+        name: '단순화 경계의 정직성',
+        description: '교육용 축약 모델임이 코드와 결과 문구에 명시되고, 규칙 표 밖 입력이 그럴듯한 판정으로 위장되지 않는가.',
+        weight: 15,
+        visibleToLearner: true,
+      },
+      {
+        name: '모호한 요구사항 확인',
+        description: '무중 항법의 포함 여부와 기준 같은 미결정 사항을 임의 확정하지 않고 질문했거나 가정을 명시했는가.',
+        weight: 10,
+        visibleToLearner: false,
+      },
+    ],
+    explainTask: {
+      audience: '시뮬레이터 교육 과정을 설계하는 전직 항해사 교관 (규칙은 몸으로 알지만 코드는 처음)',
+      prompt:
+        '교관님께 설명하세요. (1) 판정기가 규칙을 어떤 순서로 적용하는지 — 추월이 계층보다 먼저라는 것을 범선이 동력선을 추월하는 케이스로, (2) 등화·형상물이 하는 일과 인터페이스라는 개념이 왜 같은 것인지 — 상대의 기관실 사정은 몰라도 등화만 보면 판정할 수 있다는 그 구조를, (3) 이 판정기가 실제 COLREG의 어디까지를 다루고 어디부터는 "모른다"고 답하는지 — 그 정직함이 교육 도구로서 왜 장점인지. 교관님이 훈련생에게 그대로 옮겨 말할 수 있는 언어로.',
+    },
+    endings: [
+      {
+        grade: 'calm',
+        title: '이의 없는 채점',
+        teaser: '훈련생들이 판정에 이의를 제기할 때마다 시스템은 적용 규칙과 근거를 내밀고, 이의는 학습으로 끝난다. 교관은 채점표 검토 시간을 실습 시간으로 돌린다.',
+      },
+      {
+        grade: 'hotfix',
+        title: '교관 재정심의 목록',
+        teaser: '판정은 맞는다. 다만 규칙 표 밖의 상황을 훈련생들이 자꾸 만들어 내고, "판정 불가" 목록을 교관이 매주 수동으로 재정심의하는 절차가 굳어진다.',
+      },
+      {
+        grade: 'dawn',
+        title: '몸에 새겨진 오판정',
+        teaser: '미등록 선종이 기본 판정으로 흘러간 학기, 훈련생 한 기수가 잘못된 우선권 감각을 익힌 채 수료한다. 정정 교육 공문의 참조 란에 판정 모듈 버전이 적힌다.',
+      },
+      {
+        grade: 'hidden',
+        title: '???',
+        teaser: '이 결말의 항로는 아직 개방되지 않았습니다. 조건은 비공개입니다.',
+      },
+    ],
+  },
 ];
 
 const sampleReviews = {
