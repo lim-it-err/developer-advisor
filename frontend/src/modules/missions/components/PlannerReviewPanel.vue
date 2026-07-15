@@ -3,6 +3,7 @@
 import { ref } from 'vue'
 import { useMissions } from '../store/missions.js'
 import MarkdownBlock from './MarkdownBlock.vue'
+import NicknamePrompt from './NicknamePrompt.vue'
 
 const props = defineProps({
   missionId: { type: String, required: true },
@@ -14,11 +15,31 @@ const store = useMissions()
 const submission = ref(store.getPlannerSubmission(props.missionId, 'review'))
 const reviewText = ref(submission.value?.text ?? '')
 
-function submitReview() {
+const showNicknamePrompt = ref(false)
+
+function doSubmitReview() {
   const text = reviewText.value.trim()
   if (!text) return
   store.submitPlannerDeliverable(props.missionId, 'review', text)
   submission.value = store.getPlannerSubmission(props.missionId, 'review')
+}
+
+function submitReview() {
+  if (!reviewText.value.trim()) return
+  if (store.state.learner.nickname) {
+    doSubmitReview()
+  } else {
+    showNicknamePrompt.value = true
+  }
+}
+
+function onNicknameConfirmed() {
+  showNicknamePrompt.value = false
+  doSubmitReview()
+}
+
+function onNicknameCancelled() {
+  showNicknamePrompt.value = false
 }
 </script>
 
@@ -61,6 +82,11 @@ function submitReview() {
         검토서가 기록되었습니다. 트레이드오프 표와 "개발하지 않는 옵션"이 있는지 확인하세요.
       </div>
     </div>
+    <NicknamePrompt
+      v-if="showNicknamePrompt"
+      @confirmed="onNicknameConfirmed"
+      @cancelled="onNicknameCancelled"
+    />
   </div>
 </template>
 

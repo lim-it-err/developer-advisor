@@ -63,13 +63,15 @@ const persisted = load()
 
 const state = reactive({
   missions: sample.missions,
-  submissions: persisted.submissions ?? {},   // missionId -> { files, submittedAt }
-  explanations: persisted.explanations ?? {}, // missionId -> { text, submittedAt }
+  submissions: persisted.submissions ?? {},   // missionId -> { files, submittedAt, by }
+  explanations: persisted.explanations ?? {}, // missionId -> { text, submittedAt, by }
   chats: persisted.chats ?? {},               // missionId -> [{ role: 'me'|'agent', text, at }]
   // 기획자 모드: 회의 채팅 로그. missionId -> [{ role: 'me'|'stakeholder', text, at }]
   meetingChats: persisted.meetingChats ?? {},
-  // 기획자 모드: 합의문/검토서 제출. missionId -> { meeting?: {text, submittedAt}, review?: {text, submittedAt} }
+  // 기획자 모드: 합의문/검토서 제출. missionId -> { meeting?: {text, submittedAt, by}, review?: {text, submittedAt, by} }
   plannerSubmissions: persisted.plannerSubmissions ?? {},
+  // 학습자: 기록 구분용 닉네임. 인증 아님 — 단순 식별자.
+  learner: persisted.learner ?? { nickname: '' },
 })
 
 function persist() {
@@ -81,6 +83,7 @@ function persist() {
       chats: state.chats,
       meetingChats: state.meetingChats,
       plannerSubmissions: state.plannerSubmissions,
+      learner: state.learner,
     }),
   )
 }
@@ -99,16 +102,26 @@ export function useMissions() {
       return '진행 가능'
     },
 
+    setNickname(name) {
+      state.learner.nickname = String(name ?? '').trim().slice(0, 12)
+      persist()
+    },
+
     submitCode(missionId, files) {
       state.submissions[missionId] = {
         files: files.filter((f) => f.path.trim() && f.content.trim()),
         submittedAt: new Date().toISOString(),
+        by: state.learner.nickname || null,
       }
       persist()
     },
 
     submitExplanation(missionId, text) {
-      state.explanations[missionId] = { text, submittedAt: new Date().toISOString() }
+      state.explanations[missionId] = {
+        text,
+        submittedAt: new Date().toISOString(),
+        by: state.learner.nickname || null,
+      }
       persist()
     },
 
@@ -200,7 +213,11 @@ export function useMissions() {
     // 기획자 모드 산출물 제출: kind는 'meeting' | 'review'
     submitPlannerDeliverable(missionId, kind, text) {
       const entry = (state.plannerSubmissions[missionId] ??= {})
-      entry[kind] = { text, submittedAt: new Date().toISOString() }
+      entry[kind] = {
+        text,
+        submittedAt: new Date().toISOString(),
+        by: state.learner.nickname || null,
+      }
       persist()
     },
 
@@ -218,6 +235,7 @@ export function useMissions() {
           kind: 'code',
           kindLabel: '코드 제출',
           submittedAt: sub.submittedAt,
+          by: sub.by ?? null,
         })
       }
 
@@ -231,6 +249,7 @@ export function useMissions() {
           kind: 'explain',
           kindLabel: '설명 과제',
           submittedAt: exp.submittedAt,
+          by: exp.by ?? null,
         })
       }
 

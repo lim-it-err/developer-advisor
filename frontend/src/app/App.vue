@@ -1,4 +1,24 @@
 <script setup>
+import { computed, ref } from 'vue'
+import { useMissions } from '../modules/missions/store/missions.js'
+import NicknamePrompt from '../modules/missions/components/NicknamePrompt.vue'
+
+const store = useMissions()
+const nickname = computed(() => store.state.learner.nickname)
+
+const showNicknamePrompt = ref(false)
+
+function openNicknamePrompt() {
+  showNicknamePrompt.value = true
+}
+
+function onNicknameConfirmed() {
+  showNicknamePrompt.value = false
+}
+
+function onNicknameCancelled() {
+  showNicknamePrompt.value = false
+}
 </script>
 
 <template>
@@ -10,6 +30,12 @@
       </router-link>
       <span class="brand-tag">세상을 거대한 디지털 구조로 본다</span>
       <nav class="nav">
+        <button
+          v-if="nickname"
+          class="chip neutral nickname-chip"
+          title="닉네임 변경"
+          @click="openNicknamePrompt"
+        >👤 {{ nickname }}</button>
         <router-link to="/missions/history" class="nav-link">성장 기록</router-link>
       </nav>
     </header>
@@ -19,6 +45,13 @@
     <footer class="shell-footer">
       prototype v0.1 — 콘텐츠는 에이전트 생성 샘플입니다
     </footer>
+
+    <NicknamePrompt
+      v-if="showNicknamePrompt"
+      :initial="nickname"
+      @confirmed="onNicknameConfirmed"
+      @cancelled="onNicknameCancelled"
+    />
   </div>
 </template>
 
@@ -57,7 +90,16 @@
 .nav {
   margin-left: auto;
   flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
+.nickname-chip {
+  border: none;
+  font-family: inherit;
+  cursor: pointer;
+}
+.nickname-chip:hover { filter: brightness(1.15); }
 .nav-link {
   color: var(--fg-dim);
   text-decoration: none;

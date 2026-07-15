@@ -3,6 +3,7 @@
 import { ref, nextTick, watch } from 'vue'
 import { useMissions } from '../store/missions.js'
 import MarkdownBlock from './MarkdownBlock.vue'
+import NicknamePrompt from './NicknamePrompt.vue'
 
 const props = defineProps({
   missionId: { type: String, required: true },
@@ -43,11 +44,31 @@ async function send() {
   await scrollDown()
 }
 
-function submitAgreement() {
+const showNicknamePrompt = ref(false)
+
+function doSubmitAgreement() {
   const text = agreementText.value.trim()
   if (!text) return
   store.submitPlannerDeliverable(props.missionId, 'meeting', text)
   submission.value = store.getPlannerSubmission(props.missionId, 'meeting')
+}
+
+function submitAgreement() {
+  if (!agreementText.value.trim()) return
+  if (store.state.learner.nickname) {
+    doSubmitAgreement()
+  } else {
+    showNicknamePrompt.value = true
+  }
+}
+
+function onNicknameConfirmed() {
+  showNicknamePrompt.value = false
+  doSubmitAgreement()
+}
+
+function onNicknameCancelled() {
+  showNicknamePrompt.value = false
 }
 </script>
 
@@ -124,6 +145,11 @@ function submitAgreement() {
         합의문이 기록되었습니다. 실서비스에서는 비공개 관심사를 얼마나 캐냈는지가 평가됩니다.
       </div>
     </div>
+    <NicknamePrompt
+      v-if="showNicknamePrompt"
+      @confirmed="onNicknameConfirmed"
+      @cancelled="onNicknameCancelled"
+    />
   </div>
 </template>
 

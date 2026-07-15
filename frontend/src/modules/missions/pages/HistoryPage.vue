@@ -1,11 +1,32 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { useMissions } from '../store/missions.js'
+import NicknamePrompt from '../components/NicknamePrompt.vue'
 
+const router = useRouter()
 const store = useMissions()
 const { state, stages } = store
 
 const entries = computed(() => store.historyEntries())
+
+// 닉네임 게이트: 성장 기록 페이지 진입 시, 닉네임이 없으면 오버레이로 막는다.
+const showNicknamePrompt = ref(false)
+
+onMounted(() => {
+  if (!state.learner.nickname) {
+    showNicknamePrompt.value = true
+  }
+})
+
+function onNicknameConfirmed() {
+  showNicknamePrompt.value = false
+}
+
+function onNicknameCancelled() {
+  showNicknamePrompt.value = false
+  router.push('/missions')
+}
 
 const submittedCount = computed(() => Object.keys(state.submissions).length)
 const explainedCount = computed(() => Object.keys(state.explanations).length)
@@ -87,7 +108,10 @@ function formatDate(iso) {
         </div>
         <router-link :to="`/missions/${e.missionId}`" class="entry-title">{{ e.mission.title }}</router-link>
         <div class="entry-bottom">
-          <span class="entry-time">{{ formatDate(e.submittedAt) }}</span>
+          <span class="entry-time-group">
+            <span class="entry-time">{{ formatDate(e.submittedAt) }}</span>
+            <span v-if="e.by" class="chip neutral by-chip">👤 {{ e.by }}</span>
+          </span>
           <router-link
             v-if="store.getReview(e.missionId)"
             :to="`/missions/${e.missionId}/review`"
@@ -104,6 +128,12 @@ function formatDate(iso) {
       <p>아직 기록이 없습니다. 세상은 여전히 if문 범벅인 채로 당신을 기다리고 있습니다.</p>
       <p class="dim">일단 <router-link to="/missions">와인 추천기</router-link>부터 뜯어보러 가볼까요?</p>
     </section>
+
+    <NicknamePrompt
+      v-if="showNicknamePrompt"
+      @confirmed="onNicknameConfirmed"
+      @cancelled="onNicknameCancelled"
+    />
   </div>
 </template>
 
@@ -160,7 +190,9 @@ function formatDate(iso) {
 }
 .entry-title:hover { color: var(--accent); }
 .entry-bottom { display: flex; justify-content: space-between; align-items: center; }
+.entry-time-group { display: flex; align-items: center; gap: 8px; }
 .entry-time { font-size: 12.5px; color: var(--fg-dim); }
+.by-chip { font-size: 11.5px; padding: 1px 8px; }
 .entry-score { font-size: 13px; font-weight: 700; text-decoration: none; }
 
 .empty { text-align: center; padding: 40px 20px; color: var(--fg); }

@@ -9,6 +9,7 @@ import RubricList from '../components/RubricList.vue'
 import ChatPanel from '../components/ChatPanel.vue'
 import PlannerMeetingPanel from '../components/PlannerMeetingPanel.vue'
 import PlannerReviewPanel from '../components/PlannerReviewPanel.vue'
+import NicknamePrompt from '../components/NicknamePrompt.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -43,7 +44,32 @@ const files = ref(
 )
 const submitting = ref(false)
 
-async function submit() {
+// 닉네임 게이트: 제출 액션 전, 닉네임이 없으면 프롬프트를 띄우고 확인 시에만 이어간다.
+const showNicknamePrompt = ref(false)
+let pendingAction = null
+
+function requireNickname(action) {
+  if (store.state.learner.nickname) {
+    action()
+  } else {
+    pendingAction = action
+    showNicknamePrompt.value = true
+  }
+}
+
+function onNicknameConfirmed() {
+  showNicknamePrompt.value = false
+  const action = pendingAction
+  pendingAction = null
+  if (action) action()
+}
+
+function onNicknameCancelled() {
+  showNicknamePrompt.value = false
+  pendingAction = null
+}
+
+function doSubmit() {
   submitting.value = true
   store.submitCode(mission.value.id, files.value)
   // 실서비스: Reviewer Agent 호출 (20~60초). 프로토타입은 샘플 리뷰로 즉시 이동.
@@ -53,12 +79,20 @@ async function submit() {
   }, 900)
 }
 
+function submit() {
+  requireNickname(doSubmit)
+}
+
 // 설명 훈련
 const explainText = ref(store.state.explanations[route.params.id]?.text ?? '')
 
-function submitExplanation() {
+function doSubmitExplanation() {
   store.submitExplanation(mission.value.id, explainText.value)
   router.push(`/missions/${mission.value.id}/review?focus=explain`)
+}
+
+function submitExplanation() {
+  requireNickname(doSubmitExplanation)
 }
 </script>
 
@@ -240,6 +274,11 @@ function submitExplanation() {
     </section>
     </template>
     <ChatPanel v-if="mode === 'developer'" :mission-id="mission.id" />
+    <NicknamePrompt
+      v-if="showNicknamePrompt"
+      @confirmed="onNicknameConfirmed"
+      @cancelled="onNicknameCancelled"
+    />
   </div>
   <p v-else>존재하지 않는 미션입니다.</p>
 </template>
