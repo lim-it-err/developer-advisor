@@ -64,4 +64,18 @@ public class ChatService {
 
         return List.of(me, agent);
     }
+
+    /**
+     * Stateless variant for the frontend prototype: no mission lookup, no persistence.
+     * The caller supplies the mission context and the formatted conversation history.
+     */
+    public String previewReply(String context, String history, String text) {
+        Map<String, String> slots = Map.of(
+                "missionBrief", context == null ? "" : context,
+                "history", history == null ? "" : history,
+                "userMessage", text
+        );
+        String prompt = promptLoader.render("chat-reply", slots);
+        return llmClient.complete(LlmRole.CHAT, prompt, ChatReply.class).text();
+    }
 }

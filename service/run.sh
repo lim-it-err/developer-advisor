@@ -1,8 +1,9 @@
 #!/bin/zsh
 # Developer Advisor 백엔드 시작 스크립트
-# 용법:  ./run.sh test   — 전체 테스트
-#        ./run.sh start  — 서버 기동 (mock 프로필, API 키 불필요, :8080)
-#        ./run.sh demo   — 떠 있는 서버에 트랙→미션→제출→리뷰 사이클 curl
+# 용법:  ./run.sh test           — 전체 테스트
+#        ./run.sh start [프로필]  — 서버 기동 (:8080). 프로필 생략 시 mock (API 키 불필요)
+#                                   예) ./run.sh start claude  — 실제 Claude 호출 (ANTHROPIC_API_KEY 필요)
+#        ./run.sh demo           — 떠 있는 서버에 트랙→미션→제출→리뷰 사이클 curl
 set -e
 
 # conda 등 셸 환경 오염 방어: JDK 21 고정 + 위험 변수 제거
@@ -17,8 +18,14 @@ case "${1:-start}" in
     echo "✅ 테스트 통과"
     ;;
   start)
-    echo "▶ mock 프로필로 기동합니다 (http://localhost:8080/api/advisor)"
-    mvn -q spring-boot:run
+    profile="${2:-mock}"
+    if [[ "$profile" == "claude" && -z "$ANTHROPIC_API_KEY" ]]; then
+      echo "❌ ANTHROPIC_API_KEY가 설정되어 있지 않습니다."
+      echo "   export ANTHROPIC_API_KEY=... 후 다시 실행하세요."
+      exit 1
+    fi
+    echo "▶ ${profile} 프로필로 기동합니다 (http://localhost:8080/api/advisor)"
+    mvn -q spring-boot:run -Dspring-boot.run.profiles="$profile"
     ;;
   demo)
     base="http://localhost:8080/api/advisor"
@@ -44,7 +51,7 @@ case "${1:-start}" in
     echo "✅ full cycle 성공"
     ;;
   *)
-    echo "용법: ./run.sh [test|start|demo]"
+    echo "용법: ./run.sh [test|start [mock|claude]|demo]"
     exit 1
     ;;
 esac

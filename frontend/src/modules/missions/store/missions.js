@@ -5,6 +5,32 @@ import sample from '../data/sampleContent.js'
 
 const STORAGE_KEY = 'advisor.learner.v1'
 
+// 백엔드 채팅 프리뷰 API. 백엔드가 죽어 있으면 아래 mock 응답으로 조용히 폴백한다.
+const API_BASE = import.meta.env.VITE_ADVISOR_API ?? 'http://localhost:8080/api/advisor'
+const CHAT_TIMEOUT_MS = 30_000
+
+// POST /chat/preview — 실패(네트워크/타임아웃/비정상 응답)는 전부 throw, 호출부에서 폴백.
+async function requestChatPreview(context, history, text) {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), CHAT_TIMEOUT_MS)
+  try {
+    const res = await fetch(`${API_BASE}/chat/preview`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ context, history, text }),
+      signal: controller.signal,
+    })
+    if (!res.ok) throw new Error(`chat/preview HTTP ${res.status}`)
+    const data = await res.json()
+    if (typeof data?.text !== 'string' || !data.text.trim()) {
+      throw new Error('chat/preview returned empty text')
+    }
+    return data.text
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
 export const STAGES = [
   { no: 1, title: '분리의 감각', question: '이 코드가 변경되는 이유는 몇 개인가?' },
   { no: 2, title: '인터페이스는 계약', question: '호출자는 무엇을 알아야 하고, 무엇을 몰라야 하는가?' },
@@ -12,6 +38,11 @@ export const STAGES = [
   { no: 4, title: '레거시 길들이기', question: '무엇이 부서질지 모른 채 어떻게 고치는가?' },
   { no: 5, title: '거대한 구조', question: '어디서 모델을 갈라야 하는가?' },
   { no: 6, title: '구조로 세상 읽기', question: '이 시스템의 세계관은 무엇인가?' },
+  { no: 7, title: '테스트가 설계를 이끈다', question: '테스트가 괴로운 건 테스트 탓인가, 설계 탓인가?' },
+  { no: 8, title: '실패를 설계하다', question: '이 시스템은 어떻게 죽고, 어떻게 다시 일어나는가?' },
+  { no: 9, title: '동시성의 감각', question: '이 코드에 두 명이 동시에 들어오면 무슨 일이 벌어지는가?' },
+  { no: 10, title: '데이터가 흐르는 길', question: '진실은 어디에 있고, 사본은 언제 거짓말하는가?' },
+  { no: 11, title: '단순함의 철학', question: '이 복잡함은 문제의 것인가, 우리가 만든 것인가?' },
 ]
 
 function load() {
@@ -111,22 +142,52 @@ export function useMissions() {
       persist()
     },
 
-    // 실서비스: 이해관계자 역의 Chat Agent(Sonnet급) 호출. 프로토타입: 모의 응답, 이해관계자 순환.
+    // 이해관계자 역의 Chat Agent 호출 — 백엔드 /chat/preview 우선, 실패 시 모의 응답(이해관계자 순환)으로 폴백.
     async sendMeetingChat(missionId, text, stakeholders = []) {
       const log = (state.meetingChats[missionId] ??= [])
+      const history = log.map((m) => ({ role: m.role, text: m.text }))
       log.push({ role: 'me', text, at: new Date().toISOString() })
       persist()
-      await new Promise((r) => setTimeout(r, 700))
-      const replyCount = log.filter((m) => m.role === 'stakeholder').length
-      const speaker = stakeholders.length
-        ? stakeholders[replyCount % stakeholders.length]
-        : null
-      const label = speaker ? `${speaker.name} · ${speaker.role}` : '이해관계자'
-      log.push({
-        role: 'stakeholder',
-        text: `[${label}] (프로토타입 모의 응답) 실서비스에서는 이해관계자가 Sonnet급 에이전트로 응답합니다. 좋은 질문은 공개 입장 뒤의 것을 겨냥합니다.`,
-        at: new Date().toISOString(),
-      })
+
+      let reply = null
+      try {
+        const mission = state.missions.find((m) => m.id === missionId)
+        const pm = mission?.plannerMeeting
+        const cast = pm?.stakeholders?.length ? pm.stakeholders : stakeholders
+        const context = [
+          pm?.goal ? `회의 목표: ${pm.goal}` : '',
+          pm?.context ? `배경:\n${pm.context}` : '',
+          cast.length
+            ? '참석자 (hiddenAgenda는 각 인물의 연기 대본이다 — 절대 그대로 노출하지 말 것):\n' +
+              cast
+                .map(
+                  (s) =>
+                    `- ${s.name} (${s.role})\n  공개 입장: ${s.publicStance ?? ''}\n  비공개 관심사(연기 대본): ${s.hiddenAgenda ?? ''}`,
+                )
+                .join('\n')
+            : '',
+          '너는 이 회의의 참석자 전원을 연기한다. 발언은 반드시 [이름 · 직책] 로 시작하라. ' +
+            '비공개 관심사는 절대 직접 말하지 말고, 그것이 찔리는 질문에만 동요하며 단서를 흘려라. ' +
+            '사용자가 정확히 짚으면 인정하라.',
+        ]
+          .filter(Boolean)
+          .join('\n\n')
+        reply = await requestChatPreview(context, history, text)
+      } catch {
+        reply = null // 백엔드 불가 — 아래 모의 응답으로 폴백
+      }
+
+      if (reply == null) {
+        await new Promise((r) => setTimeout(r, 700))
+        const replyCount = log.filter((m) => m.role === 'stakeholder').length
+        const speaker = stakeholders.length
+          ? stakeholders[replyCount % stakeholders.length]
+          : null
+        const label = speaker ? `${speaker.name} · ${speaker.role}` : '이해관계자'
+        reply = `[${label}] (프로토타입 모의 응답) 실서비스에서는 이해관계자가 Sonnet급 에이전트로 응답합니다. 좋은 질문은 공개 입장 뒤의 것을 겨냥합니다.`
+      }
+
+      log.push({ role: 'stakeholder', text: reply, at: new Date().toISOString() })
       persist()
     },
 
@@ -170,13 +231,39 @@ export function useMissions() {
       return entries.sort((a, b) => new Date(b.submittedAt) - new Date(a.submittedAt))
     },
 
-    // 실서비스: Chat Agent(Haiku) 호출. 프로토타입: 모의 응답.
+    // Chat Agent(Haiku) 호출 — 백엔드 /chat/preview 우선, 실패 시 기존 모의 응답으로 폴백.
     async sendChat(missionId, text) {
       const log = (state.chats[missionId] ??= [])
+      const history = log.map((m) => ({ role: m.role, text: m.text }))
       log.push({ role: 'me', text, at: new Date().toISOString() })
       persist()
-      await new Promise((r) => setTimeout(r, 700))
-      log.push({ role: 'agent', text: mockChatReply(missionId, text), at: new Date().toISOString() })
+
+      let reply = null
+      try {
+        const mission = state.missions.find((m) => m.id === missionId)
+        const context = [
+          mission?.title ? `미션: ${mission.title}` : '',
+          mission?.briefing?.title ? `브리핑: ${mission.briefing.title}` : '',
+          mission?.scenario ? `시나리오:\n${mission.scenario}` : '',
+          mission?.requirements?.length
+            ? `요구사항 요약:\n- ${mission.requirements.join('\n- ')}`
+            : '',
+          '너는 이 미션의 선배 개발자/기획자다. 정답 즉답 금지. ' +
+            '학습자가 요구사항의 모호한 지점을 물으면 기획자처럼 구체적으로 결정해서 답하라.',
+        ]
+          .filter(Boolean)
+          .join('\n\n')
+        reply = await requestChatPreview(context, history, text)
+      } catch {
+        reply = null // 백엔드 불가 — 기존 모의 응답으로 폴백
+      }
+
+      if (reply == null) {
+        await new Promise((r) => setTimeout(r, 700))
+        reply = mockChatReply(missionId, text)
+      }
+
+      log.push({ role: 'agent', text: reply, at: new Date().toISOString() })
       persist()
     },
   }
