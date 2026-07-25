@@ -9,6 +9,8 @@ const STORAGE_KEY = 'advisor.learner.v1'
 // 백엔드 채팅 프리뷰 API. 백엔드가 죽어 있으면 아래 mock 응답으로 조용히 폴백한다.
 const API_BASE = import.meta.env.VITE_ADVISOR_API ?? 'http://localhost:8080/api/advisor'
 const CHAT_TIMEOUT_MS = 30_000
+// 실제 리뷰는 코드를 읽고 루브릭 기준으로 채점하므로 30~90초가 걸린다.
+const REVIEW_TIMEOUT_MS = 120_000
 
 // POST /chat/preview — 실패(네트워크/타임아웃/비정상 응답)는 전부 throw, 호출부에서 폴백.
 async function requestChatPreview(context, history, text) {
@@ -30,6 +32,43 @@ async function requestChatPreview(context, history, text) {
   } finally {
     clearTimeout(timer)
   }
+}
+
+// POST /review/preview — 실패(네트워크/타임아웃/비정상 응답)는 전부 throw, 호출부는 가짜 리뷰를 만들지 않고 조용히 포기한다.
+// 응답에는 overall이 없다 — items[].score 합으로 클라이언트에서 계산한다.
+async function requestReviewPreview(payload) {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), REVIEW_TIMEOUT_MS)
+  try {
+    const res = await fetch(`${API_BASE}/review/preview`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    })
+    if (!res.ok) throw new Error(`review/preview HTTP ${res.status}`)
+    const data = await res.json()
+    if (!data || !Array.isArray(data.items)) {
+      throw new Error('review/preview returned malformed content')
+    }
+    return data
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+function clampScore(n) {
+  return Math.max(0, Math.min(100, Math.round(Number(n) || 0)))
+}
+
+// 제출 이력은 { files, submittedAt, by } 배열. 과거(단일 객체) 저장분을 배열로 감싸 마이그레이션한다.
+function migrateSubmissions(raw) {
+  const result = {}
+  for (const [id, val] of Object.entries(raw ?? {})) {
+    if (Array.isArray(val)) result[id] = val
+    else if (val && typeof val === 'object') result[id] = [val]
+  }
+  return result
 }
 
 export const PARTS = [
@@ -64,7 +103,7 @@ const persisted = load()
 
 const state = reactive({
   missions: sample.missions,
-  submissions: persisted.submissions ?? {},   // missionId -> { files, submittedAt, by }
+  submissions: migrateSubmissions(persisted.submissions), // missionId -> [{ files, submittedAt, by }] (버전별, 재제출 시 append)
   explanations: persisted.explanations ?? {}, // missionId -> { text, submittedAt, by }
   chats: persisted.chats ?? {},               // missionId -> [{ role: 'me'|'agent', text, at }]
   // 기획자 모드: 회의 채팅 로그. missionId -> [{ role: 'me'|'stakeholder', text, at }]
@@ -77,6 +116,8 @@ const state = reactive({
   projects: projectSample.projects ?? [],
   // 프로젝트 모드 제출물. subMissionId -> { files, submittedAt, by }
   projectSubmissions: persisted.projectSubmissions ?? {},
+  // 실서비스 리뷰 결과. missionId -> [{ content, overall, reviewedAt }] (버전별, 성공한 리뷰만 append)
+  reviews: persisted.reviews ?? {},
 })
 
 function persist() {
@@ -90,8 +131,27 @@ function persist() {
       plannerSubmissions: state.plannerSubmissions,
       learner: state.learner,
       projectSubmissions: state.projectSubmissions,
+      reviews: state.reviews,
     }),
   )
+}
+
+// 리뷰 조회 공통 헬퍼: 실제 저장된 리뷰가 있으면 그걸, 없으면(그리고 제출 이력이 있으면) 샘플로 폴백.
+// 반환 형태는 항상 [{ content, overall, reviewedAt }] 배열.
+function reviewVersions(missionId) {
+  const stored = state.reviews[missionId]
+  if (stored?.length) return stored
+  if (state.submissions[missionId]?.length && sample.sampleReviews[missionId]) {
+    const sampleReview = sample.sampleReviews[missionId]
+    return [
+      {
+        content: { ...sampleReview, reputation: sample.sampleReputation?.[missionId] ?? null },
+        overall: sampleReview.overall,
+        reviewedAt: null, // null = 샘플(프로토타입) 리뷰라는 표식
+      },
+    ]
+  }
+  return []
 }
 
 export function useMissions() {
@@ -104,7 +164,7 @@ export function useMissions() {
     },
 
     missionStatus(id) {
-      if (state.submissions[id]) return '제출됨'
+      if (state.submissions[id]?.length) return '제출됨'
       return '진행 가능'
     },
 
@@ -153,13 +213,52 @@ export function useMissions() {
       persist()
     },
 
-    submitCode(missionId, files) {
-      state.submissions[missionId] = {
+    // 코드 제출 + 실제 Reviewer 백엔드 호출. 제출 자체는 항상 저장되고(재제출은 새 버전으로 append),
+    // 리뷰는 백엔드가 성공적으로 응답했을 때만 저장된다 — 실패 시 가짜 리뷰를 만들지 않는다.
+    async submitCode(missionId, files) {
+      const mission = state.missions.find((m) => m.id === missionId)
+      const versions = (state.submissions[missionId] ??= [])
+      const entry = {
         files: files.filter((f) => f.path.trim() && f.content.trim()),
         submittedAt: new Date().toISOString(),
         by: state.learner.nickname || null,
       }
+      versions.push(entry)
       persist()
+
+      if (!mission) return false
+
+      try {
+        const chatLog = state.chats[missionId] ?? []
+        const chatTranscript = chatLog.length
+          ? chatLog.map((m) => `[${m.role === 'me' ? '학습자' : '에이전트'}] ${m.text}`).join('\n')
+          : null
+
+        const payload = {
+          mission: {
+            title: mission.title,
+            scenario: mission.scenario,
+            requirements: mission.requirements ?? [],
+            constraints: mission.constraints ?? [],
+            rubric: mission.rubric ?? [],
+            hiddenCases: mission.hiddenCases ?? [],
+            endings: mission.endings ?? [],
+            hiddenQuest: mission.hiddenQuest ?? null,
+          },
+          files: entry.files,
+          chatTranscript,
+        }
+
+        const content = await requestReviewPreview(payload)
+        const overall = clampScore((content.items ?? []).reduce((sum, it) => sum + (Number(it.score) || 0), 0))
+
+        const reviews = (state.reviews[missionId] ??= [])
+        reviews.push({ content, overall, reviewedAt: new Date().toISOString() })
+        persist()
+        return true
+      } catch {
+        return false // 백엔드 불가/실패 — 저장된 리뷰 없음. UI는 이를 정직하게 드러낸다.
+      }
     },
 
     submitExplanation(missionId, text) {
@@ -171,10 +270,17 @@ export function useMissions() {
       persist()
     },
 
-    // 프로토타입: 리뷰는 사전 생성된 샘플. 실서비스에서는 Reviewer Agent 호출.
-    getReview(missionId) {
-      if (!state.submissions[missionId]) return null
-      return sample.sampleReviews[missionId] ?? null
+    // 저장된 실제 리뷰 버전 전체(최신순 아님 — 제출 순). 재제출 이력 셀렉터용.
+    getReviews(missionId) {
+      return reviewVersions(missionId).map((r) => ({ ...r.content, overall: r.overall, reviewedAt: r.reviewedAt }))
+    },
+
+    // index 미지정 시 최신 리뷰. 실제 저장된 리뷰가 있으면 그것을, 없으면(s1-wine-01 한정) 샘플로 폴백, 그마저 없으면 null.
+    getReview(missionId, index) {
+      const list = reviewVersions(missionId)
+      if (!list.length) return null
+      const r = index != null && list[index] ? list[index] : list[list.length - 1]
+      return { ...r.content, overall: r.overall, reviewedAt: r.reviewedAt }
     },
 
     getExplainFeedback(missionId) {
@@ -182,9 +288,12 @@ export function useMissions() {
       return sample.sampleExplainFeedback[missionId] ?? null
     },
 
-    // 프로토타입: 평판 샘플. 실서비스에서는 Reviewer가 질문 창 대화를 읽고 생성.
-    getReputation(missionId) {
-      return sample.sampleReputation?.[missionId] ?? null
+    // 평판은 리뷰 응답에 포함되어 함께 저장된다. index 미지정 시 최신 리뷰의 평판.
+    getReputation(missionId, index) {
+      const list = reviewVersions(missionId)
+      if (!list.length) return null
+      const r = index != null && list[index] ? list[index] : list[list.length - 1]
+      return r.content.reputation ?? null
     },
 
     chatMessages(missionId) {
@@ -271,17 +380,21 @@ export function useMissions() {
     historyEntries() {
       const entries = []
 
-      for (const [missionId, sub] of Object.entries(state.submissions)) {
+      for (const [missionId, versions] of Object.entries(state.submissions)) {
         const mission = state.missions.find((m) => m.id === missionId)
         if (!mission) continue
-        entries.push({
-          key: `${missionId}-code`,
-          missionId,
-          mission,
-          kind: 'code',
-          kindLabel: '코드 제출',
-          submittedAt: sub.submittedAt,
-          by: sub.by ?? null,
+        versions.forEach((sub, i) => {
+          const attempt = i + 1
+          entries.push({
+            key: `${missionId}-code-${attempt}`,
+            missionId,
+            mission,
+            kind: 'code',
+            kindLabel: attempt > 1 ? `코드 제출 · ${attempt}차` : '코드 제출',
+            attempt,
+            submittedAt: sub.submittedAt,
+            by: sub.by ?? null,
+          })
         })
       }
 

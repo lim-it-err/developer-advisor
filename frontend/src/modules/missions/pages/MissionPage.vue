@@ -37,10 +37,11 @@ const ENDING_META = {
 const TABS = ['도메인 브리핑', '미션', '제출', '설명 훈련']
 const tab = ref('도메인 브리핑')
 
-// 제출 상태
-const existing = store.state.submissions[route.params.id]
+// 제출 상태 — submissions는 버전 배열(재제출 시 append). 최신 버전을 편집 초기값으로 쓴다.
+const submissionVersions = computed(() => store.state.submissions[route.params.id] ?? [])
+const latestSubmission = computed(() => submissionVersions.value[submissionVersions.value.length - 1] ?? null)
 const files = ref(
-  existing?.files?.map((f) => ({ ...f })) ?? [{ path: '', content: '' }],
+  latestSubmission.value?.files?.map((f) => ({ ...f })) ?? [{ path: '', content: '' }],
 )
 const submitting = ref(false)
 
@@ -69,14 +70,17 @@ function onNicknameCancelled() {
   pendingAction = null
 }
 
-function doSubmit() {
+async function doSubmit() {
   submitting.value = true
-  store.submitCode(mission.value.id, files.value)
-  // 실서비스: Reviewer Agent 호출 (20~60초). 프로토타입은 샘플 리뷰로 즉시 이동.
-  setTimeout(() => {
-    submitting.value = false
-    router.push(`/missions/${mission.value.id}/review`)
-  }, 900)
+  const missionId = mission.value.id
+  const gotReview = await store.submitCode(missionId, files.value)
+  // 백엔드가 리뷰를 만들지 못했을 때만(=대기 시간이 없었을 때만) 짧은 가짜 지연을 준다 —
+  // 실제 리뷰를 기다렸다면 이미 충분히 기다린 것이므로 추가 지연은 없다.
+  if (!gotReview) {
+    await new Promise((r) => setTimeout(r, 900))
+  }
+  submitting.value = false
+  router.push(`/missions/${missionId}/review`)
 }
 
 function submit() {
@@ -247,10 +251,13 @@ function submitExplanation() {
         <button class="btn primary" :disabled="submitting" @click="submit">
           {{ submitting ? '리뷰 요청 중…' : '제출하고 리뷰 받기' }}
         </button>
-        <span v-if="existing" class="dim">
-          이전 제출: {{ new Date(existing.submittedAt).toLocaleString('ko-KR') }}
+        <span v-if="latestSubmission" class="dim">
+          이전 제출: {{ submissionVersions.length }}차 ({{ new Date(latestSubmission.submittedAt).toLocaleString('ko-KR') }})
         </span>
       </div>
+      <p v-if="submitting" class="dim submit-progress">
+        Reviewer가 코드를 읽는 중… 30초~1분 걸립니다
+      </p>
     </section>
 
     <!-- 설명 훈련 -->
@@ -373,6 +380,7 @@ h1 { font-size: 22px; margin: 0; }
 .hints li { margin: 6px 0; font-size: 14px; }
 .panel-next { margin-top: 20px; }
 .submit-row { display: flex; align-items: center; gap: 14px; margin-top: 16px; }
+.submit-progress { margin-top: 10px; }
 .explain-brief { margin-bottom: 14px; }
 .explain-input {
   width: 100%;

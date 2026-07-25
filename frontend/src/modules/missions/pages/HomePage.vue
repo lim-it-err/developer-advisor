@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useMissions } from '../store/missions.js'
 import { PARTS } from '../store/missions.js'
 
@@ -9,13 +9,64 @@ const stagesByPart = computed(() =>
   PARTS.map((p) => ({ ...p, stages: stages.filter((s) => s.part === p.no) })),
 )
 
+const doneCount = computed(() => Object.keys(state.submissions).length)
+
+// ---- 미션 필터: 난이도 / 범위 / 유형 (그룹 내 OR, 그룹 간 AND) + 텍스트 검색 ----
+const FILTER_GROUPS = [
+  { key: 'difficulty', label: '난이도', options: ['Easy', 'Normal', 'Hard'] },
+  { key: 'scope', label: '범위', options: ['단일 파일', '여러 파일', '모듈 경계'] },
+  { key: 'missionType', label: '유형', options: ['리팩토링', '기능 추가', '도메인 로직 구현', '설계 리뷰'] },
+]
+
+const selected = ref({ difficulty: [], scope: [], missionType: [] })
+const search = ref('')
+
+function toggleFilter(groupKey, option) {
+  const list = selected.value[groupKey]
+  const i = list.indexOf(option)
+  if (i === -1) list.push(option)
+  else list.splice(i, 1)
+}
+
+const filtersActive = computed(() =>
+  FILTER_GROUPS.some((g) => selected.value[g.key].length > 0) || search.value.trim().length > 0,
+)
+
+function resetFilters() {
+  for (const g of FILTER_GROUPS) selected.value[g.key] = []
+  search.value = ''
+}
+
+const filteredMissions = computed(() => {
+  const q = search.value.trim().toLowerCase()
+  return state.missions.filter((m) => {
+    for (const g of FILTER_GROUPS) {
+      const picked = selected.value[g.key]
+      if (picked.length && !picked.includes(m[g.key])) return false
+    }
+    if (q) {
+      const haystack = `${m.title ?? ''} ${m.domain ?? ''}`.toLowerCase()
+      if (!haystack.includes(q)) return false
+    }
+    return true
+  })
+})
+
 const missionsByStage = computed(() => {
   const map = {}
-  for (const m of state.missions) (map[m.stage] ??= []).push(m)
+  for (const m of filteredMissions.value) (map[m.stage] ??= []).push(m)
   return map
 })
 
-const doneCount = computed(() => Object.keys(state.submissions).length)
+// 필터 적용 중, 매칭 미션이 없는 스테이지는 박스를 통째로 접는다(숨긴다).
+const stagesByPartFiltered = computed(() =>
+  stagesByPart.value
+    .map((p) => ({
+      ...p,
+      stages: filtersActive.value ? p.stages.filter((s) => missionsByStage.value[s.no]?.length) : p.stages,
+    }))
+    .filter((p) => !filtersActive.value || p.stages.length),
+)
 </script>
 
 <template>
@@ -33,7 +84,43 @@ const doneCount = computed(() => Object.keys(state.submissions).length)
       <span class="pb-arrow">→</span>
     </router-link>
 
-    <section v-for="p in stagesByPart" :key="p.no" class="part">
+    <section class="filter-bar card">
+      <div class="filter-groups">
+        <div v-for="g in FILTER_GROUPS" :key="g.key" class="filter-group">
+          <span class="filter-group-label">{{ g.label }}</span>
+          <div class="chip-toggles">
+            <button
+              v-for="opt in g.options"
+              :key="opt"
+              class="chip-toggle"
+              :class="{ active: selected[g.key].includes(opt) }"
+              @click="toggleFilter(g.key, opt)"
+            >{{ opt }}</button>
+          </div>
+        </div>
+        <div class="filter-group filter-search">
+          <span class="filter-group-label">검색</span>
+          <input
+            v-model="search"
+            type="text"
+            class="search-input"
+            placeholder="제목·도메인으로 찾기"
+          />
+        </div>
+      </div>
+      <div class="filter-footer">
+        <span class="filter-count">
+          {{ filtersActive ? `${filteredMissions.length}개 미션 표시 중` : `총 ${state.missions.length}개 미션` }}
+        </span>
+        <button v-if="filtersActive" class="btn filter-reset" @click="resetFilters">필터 초기화</button>
+      </div>
+    </section>
+
+    <p v-if="filtersActive && !filteredMissions.length" class="empty-filter dim">
+      조건에 맞는 미션이 없습니다. 필터를 좁혔더니 세상이 텅 비었습니다.
+    </p>
+
+    <section v-for="p in stagesByPartFiltered" :key="p.no" class="part">
       <div class="part-head">
         <span class="part-no">제{{ p.no }}부</span>
         <span class="part-title">{{ p.title }}</span>
@@ -108,6 +195,48 @@ const doneCount = computed(() => Object.keys(state.submissions).length)
 .project-banner:hover { border-color: var(--accent); }
 .pb-text { font-weight: 600; font-size: 14.5px; }
 .pb-arrow { color: var(--accent); font-weight: 700; }
+
+.filter-bar { margin-bottom: 24px; padding: 16px 18px; }
+.filter-groups { display: flex; flex-wrap: wrap; gap: 18px 28px; }
+.filter-group { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.filter-group-label { font-size: 12px; font-weight: 700; color: var(--fg-dim); letter-spacing: 0.3px; }
+.chip-toggles { display: flex; flex-wrap: wrap; gap: 6px; max-width: 100%; }
+.chip-toggle {
+  background: var(--bg-soft);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--fg-dim);
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 6px 12px;
+  white-space: nowrap;
+}
+.chip-toggle.active { background: var(--accent-soft); color: var(--accent); border-color: transparent; }
+.filter-search { flex: 1 1 200px; }
+.search-input {
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--fg);
+  padding: 7px 12px;
+  font-size: 13px;
+  width: 100%;
+  max-width: 260px;
+}
+.search-input:focus { outline: none; border-color: var(--accent); }
+.filter-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.filter-count { font-size: 12.5px; color: var(--fg-dim); }
+.filter-reset { padding: 6px 14px; font-size: 12.5px; min-height: 0; }
+.empty-filter { text-align: center; padding: 20px; }
+
 .part { margin-bottom: 34px; }
 .part-head {
   display: flex;
@@ -174,6 +303,11 @@ const doneCount = computed(() => Object.keys(state.submissions).length)
   }
   .mc-top { flex-wrap: wrap; gap: 6px; }
   .chips { flex-wrap: wrap; }
+  .filter-bar { padding: 14px; }
+  .filter-groups { gap: 14px; }
+  .filter-search { flex-basis: 100%; }
+  .search-input { max-width: 100%; }
+  .filter-footer { flex-wrap: wrap; }
 }
 
 @media (max-width: 400px) {

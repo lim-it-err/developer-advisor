@@ -116,4 +116,27 @@ public class ReviewService {
                 .orElseThrow(() -> new NotFoundException("review for submission " + submissionId + " not found"));
         return PersistenceMapper.toDomain(entity);
     }
+
+    /**
+     * Stateless variant for the frontend prototype: no mission/submission lookup, no
+     * persistence. The caller (ReviewPreviewController) supplies the mission spec already
+     * formatted into readable text blocks; this only renders the prompt and calls the LLM.
+     */
+    public ReviewContent previewReview(String missionTitle, String scenario, String requirements,
+                                        String constraints, String rubric, String hiddenCases, String endings,
+                                        String files, String chatTranscript) {
+        Map<String, String> slots = Map.of(
+                "missionTitle", missionTitle == null ? "" : missionTitle,
+                "scenario", scenario == null ? "" : scenario,
+                "requirements", requirements == null ? "" : requirements,
+                "constraints", constraints == null ? "" : constraints,
+                "rubric", rubric == null ? "" : rubric,
+                "hiddenCases", hiddenCases == null ? "" : hiddenCases,
+                "endings", endings == null ? "" : endings,
+                "files", files == null ? "" : files,
+                "chatTranscript", chatTranscript == null ? "" : chatTranscript
+        );
+        String prompt = promptLoader.render("review-submission", slots);
+        return llmClient.complete(LlmRole.REVIEW, prompt, ReviewContent.class);
+    }
 }

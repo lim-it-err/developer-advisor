@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useMissions } from '../store/missions.js'
 import MarkdownBlock from '../components/MarkdownBlock.vue'
@@ -8,10 +8,31 @@ const route = useRoute()
 const store = useMissions()
 
 const mission = computed(() => store.getMission(route.params.id))
-const review = computed(() => store.getReview(route.params.id))
+
+// 제출/리뷰 버전 — 실제 리뷰가 여러 번 쌓였을 수 있다(재제출). 기본은 최신(현재) 버전을 보여준다.
+const submissionVersions = computed(() => store.state.submissions[route.params.id] ?? [])
+const hasSubmission = computed(() => submissionVersions.value.length > 0)
+const reviewVersions = computed(() => store.getReviews(route.params.id))
+
+const selectedIndex = ref(null)
+watch(
+  () => route.params.id,
+  () => { selectedIndex.value = null }, // 미션이 바뀌면 다시 "최신"으로
+)
+const activeIndex = computed(() =>
+  selectedIndex.value != null && reviewVersions.value[selectedIndex.value]
+    ? selectedIndex.value
+    : reviewVersions.value.length - 1,
+)
+const review = computed(() => reviewVersions.value[activeIndex.value] ?? null)
+
 const explainFeedback = computed(() => store.getExplainFeedback(route.params.id))
-const reputation = computed(() => (review.value ? store.getReputation(route.params.id) : null))
+const reputation = computed(() => review.value?.reputation ?? null)
 const explanation = computed(() => store.state.explanations[route.params.id])
+
+function formatDate(iso) {
+  return iso ? new Date(iso).toLocaleString('ko-KR') : ''
+}
 
 const ENDING_ICONS = { calm: '☕', hotfix: '🔧', dawn: '🚨', hidden: '🔓' }
 
@@ -35,10 +56,24 @@ function itemColor(item) {
   <div v-if="mission">
     <router-link :to="`/missions/${mission.id}`" class="back">← 미션으로</router-link>
     <h1>리뷰 — {{ mission.title }}</h1>
-    <p class="proto-note">
-      ⚠️ 프로토타입: 아래 리뷰는 에이전트가 미리 생성한 <strong>샘플</strong>입니다.
-      실서비스에서는 방금 제출한 코드를 Reviewer Agent가 직접 분석합니다.
+    <p v-if="review && !review.reviewedAt" class="proto-note">
+      ⚠️ 이 미션은 아직 실제 백엔드 리뷰 샘플이 없어 <strong>미리 생성된 샘플 리뷰</strong>를 보여줍니다.
+      백엔드가 연결되면 방금 제출한 코드를 Reviewer Agent가 직접 분석합니다.
     </p>
+    <p v-else-if="review" class="proto-note real">
+      ✅ 실시간 리뷰 — {{ formatDate(review.reviewedAt) }}에 Reviewer Agent가 생성했습니다.
+    </p>
+
+    <!-- 재제출로 리뷰가 여러 버전 쌓였을 때: 버전 셀렉터 -->
+    <div v-if="reviewVersions.length > 1" class="version-pills">
+      <button
+        v-for="(v, i) in reviewVersions"
+        :key="i"
+        class="version-pill"
+        :class="{ active: i === activeIndex }"
+        @click="selectedIndex = i"
+      >v{{ i + 1 }}<template v-if="i === reviewVersions.length - 1"> · 현재</template></button>
+    </div>
 
     <!-- 코드 리뷰 -->
     <section v-if="review" class="card block">
@@ -95,6 +130,10 @@ function itemColor(item) {
       <ol>
         <li v-for="q in review.followUpQuestions" :key="q">{{ q }}</li>
       </ol>
+    </section>
+    <section v-else-if="hasSubmission" class="card block dim">
+      리뷰 엔진이 연결되어 있지 않습니다. 백엔드를 켜면(service/run.sh start claude) 제출 시 실시간 리뷰가 생성됩니다.
+      지금은 코드를 Claude Code 채팅에 붙여넣어 리뷰받을 수 있습니다.
     </section>
     <section v-else class="card block dim">
       아직 코드를 제출하지 않았습니다.
@@ -174,6 +213,22 @@ h1 { font-size: 22px; margin: 12px 0 8px; }
   border-radius: 8px;
   padding: 8px 12px;
 }
+.proto-note.real {
+  color: var(--good);
+  background: rgba(158, 206, 106, 0.08);
+  border-color: rgba(158, 206, 106, 0.3);
+}
+.version-pills { display: flex; gap: 6px; flex-wrap: wrap; margin: 12px 0; }
+.version-pill {
+  background: var(--bg-soft);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--fg-dim);
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 5px 12px;
+}
+.version-pill.active { background: var(--accent-soft); color: var(--accent); border-color: transparent; }
 .block { margin-bottom: 18px; }
 .overall { display: flex; gap: 20px; align-items: center; margin-bottom: 20px; }
 .overall-score { font-size: 46px; font-weight: 800; }
