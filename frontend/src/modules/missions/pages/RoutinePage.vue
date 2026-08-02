@@ -1,15 +1,28 @@
 <script setup>
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useMissions } from '../store/missions.js'
 
 const store = useMissions()
 
+// 요일 선택: 기본은 오늘. 다른 요일을 고르면 그 요일 덱을 미리보기로 보여준다(체크는 당일에만).
+const WEEKDAY_TABS = [
+  { day: 1, label: '월' }, { day: 2, label: '화' }, { day: 3, label: '수' },
+  { day: 4, label: '목' }, { day: 5, label: '금' }, { day: 6, label: '토' }, { day: 0, label: '일' },
+]
+const todayDay = new Date().getDay()
+const selectedDay = ref(todayDay)
+const isToday = computed(() => selectedDay.value === todayDay)
+
 // routineToday()는 호출 시점에 오늘의 완료 슬롯 수를 routineHistory에 기록한다(스토어 쪽 부수효과).
-// 여기서는 그 결과를 그대로 화면에 반영만 한다.
-const routine = computed(() => store.routineToday())
+// 미리보기(routineForWeekday)는 부수효과가 없다.
+const routine = computed(() =>
+  isToday.value ? store.routineToday() : store.routineForWeekday(selectedDay.value),
+)
 
 const dateLabel = computed(() =>
-  new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' }),
+  isToday.value
+    ? new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' })
+    : `${WEEKDAY_TABS.find((t) => t.day === selectedDay.value)?.label}요일 미리보기`,
 )
 
 // 현재 어느 슬롯을 강조할지 — 평일(3슬롯)은 시간대(11/17시) 기준, 주말(2슬롯)은 정오 기준으로 반씩.
@@ -37,10 +50,22 @@ function check(slot) {
         <span class="hero-date">{{ dateLabel }}</span>
         <span v-if="routine.streak > 0" class="chip streak-badge">🔥 {{ routine.streak }}일 연속</span>
       </div>
+      <div class="weekday-tabs">
+        <button
+          v-for="t in WEEKDAY_TABS"
+          :key="t.day"
+          class="weekday-tab"
+          :class="{ active: selectedDay === t.day, today: t.day === todayDay }"
+          @click="selectedDay = t.day"
+        >{{ t.label }}</button>
+      </div>
       <div class="hero-theme">
         <span class="theme-name">{{ routine.name }}</span>
         <span class="theme-tagline">{{ routine.tagline }}</span>
       </div>
+      <p v-if="!isToday" class="preview-note dim">
+        다른 요일의 덱입니다 — 미션은 지금 바로 해도 되지만, 체크와 스트릭은 당일에만 쌓입니다.
+      </p>
     </section>
 
     <div class="slots">
@@ -48,7 +73,7 @@ function check(slot) {
         v-for="(s, i) in routine.slots"
         :key="i"
         class="slot card"
-        :class="{ active: currentBandIndex === i, done: s.done }"
+        :class="{ active: isToday && currentBandIndex === i, done: isToday && s.done }"
       >
         <div class="slot-top">
           <span class="slot-emoji">{{ s.emoji }}</span>
@@ -56,7 +81,7 @@ function check(slot) {
             <div class="slot-time">{{ s.time }}</div>
             <div class="slot-label">{{ s.label }}</div>
           </div>
-          <span v-if="s.done" class="slot-check">✓ 완료</span>
+          <span v-if="isToday && s.done" class="slot-check">✓ 완료</span>
         </div>
 
         <router-link v-if="s.linkTo" :to="s.linkTo" class="slot-mission">
@@ -65,7 +90,7 @@ function check(slot) {
         <p v-else class="slot-empty dim">오늘 배정할 항목이 없습니다. 세상이 텅 비었습니다.</p>
 
         <button
-          v-if="s.manualCheckable && !s.done"
+          v-if="isToday && s.manualCheckable && !s.done"
           class="btn read-check"
           @click="check(s)"
         >{{ s.checkLabel }}</button>
@@ -88,6 +113,29 @@ function check(slot) {
 .hero-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .hero-date { color: var(--fg-dim); font-size: 14px; }
 .streak-badge { background: rgba(224, 175, 104, 0.15); color: var(--warn); font-weight: 700; }
+.weekday-tabs {
+  display: flex;
+  gap: 6px;
+  margin-top: 12px;
+}
+.weekday-tab {
+  flex: 1;
+  min-height: 40px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg-soft);
+  color: var(--fg-dim);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.weekday-tab.today { color: var(--fg); }
+.weekday-tab.active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(122, 162, 247, 0.12);
+}
+.preview-note { font-size: 12.5px; margin: 8px 0 0; }
 .hero-theme {
   margin-top: 10px;
   padding-top: 10px;

@@ -555,6 +555,17 @@ export function useMissions() {
       return { date: dateStr, name: built.name, tagline: built.tagline, slots: built.slots, streak }
     },
 
+    // 다른 요일 미리보기 — 그 요일이 다음에 돌아오는 날짜 기준으로 덱을 빌드한다.
+    // routineToday()와 달리 히스토리 기록 부수효과가 없다. 체크·완료 판정은 당일에만 의미가 있다.
+    routineForWeekday(weekday) {
+      const cursor = new Date()
+      const diff = (weekday - cursor.getDay() + 7) % 7
+      cursor.setDate(cursor.getDate() + diff)
+      const dateStr = localDateStr(cursor)
+      const built = buildRoutineForDate(state, dateStr)
+      return { date: dateStr, name: built.name, tagline: built.tagline, slots: built.slots, isToday: diff === 0 }
+    },
+
     // 슬롯 하나의 수동 체크('읽었어요' 등). checkIndex는 routineToday()가 돌려준 slot.checkIndex.
     checkRoutineSlot(checkIndex) {
       const dateStr = localDateStr()
