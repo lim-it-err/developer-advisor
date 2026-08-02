@@ -12,6 +12,11 @@ export const missionRoutes = [
     component: () => import('./pages/RoutinePage.vue'),
   },
   {
+    path: '/games',
+    name: 'games',
+    component: () => import('./pages/GamesPage.vue'),
+  },
+  {
     path: '/missions/history',
     name: 'mission-history',
     component: () => import('./pages/HistoryPage.vue'),
