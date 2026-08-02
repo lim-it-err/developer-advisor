@@ -24,7 +24,6 @@ import kr.co.workaround.advisor.domain.submission.SubmittedFile;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -104,7 +103,7 @@ public class ReviewService {
         int overall = reviewContent.items().stream().mapToInt(ReviewItem::score).sum();
 
         Review review = new Review(Ids.next("rev_"), submission.id(), overall, ReviewStatus.READY,
-                reviewContent, Instant.now());
+                reviewContent, Clocks.now());
         reviewRepository.save(PersistenceMapper.toEntity(review));
 
         return new SubmissionOutcome(submission.id(), review.id(), review.status());

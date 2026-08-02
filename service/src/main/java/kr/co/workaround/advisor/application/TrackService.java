@@ -9,7 +9,6 @@ import kr.co.workaround.advisor.domain.track.Track;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Instant;
 
 @Service
 public class TrackService {
@@ -24,7 +23,7 @@ public class TrackService {
     public Track create(String domain, Difficulty difficulty, String focus) {
         String id = Ids.next("trk_");
         String title = buildTitle(domain, focus);
-        Track track = new Track(id, domain, difficulty, focus, title, Instant.now());
+        Track track = new Track(id, domain, difficulty, focus, title, Clocks.now());
         trackRepository.save(PersistenceMapper.toEntity(track));
         return track;
     }

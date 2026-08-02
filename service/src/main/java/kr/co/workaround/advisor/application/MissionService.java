@@ -17,7 +17,6 @@ import kr.co.workaround.advisor.domain.track.Track;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -73,7 +72,7 @@ public class MissionService {
         Mission mission = new Mission(
                 Ids.next("msn_"), trackId, stage, stageTitle, missionType, difficulty, scope,
                 track.domain(), domainEmoji, content.briefing().title(), 90, MissionStatus.ACTIVE,
-                content, Instant.now()
+                content, Clocks.now()
         );
         missionRepository.save(PersistenceMapper.toEntity(mission));
         return mission;

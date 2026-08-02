@@ -11,7 +11,6 @@ import kr.co.workaround.advisor.domain.submission.SubmittedFile;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Instant;
 import java.util.List;
 
 @Service
@@ -28,7 +27,7 @@ public class SubmissionService {
     @Transactional
     public Submission create(String missionId, List<SubmittedFile> files, String explanation) {
         String id = Ids.next("sub_");
-        Submission submission = new Submission(id, missionId, files, explanation, Instant.now());
+        Submission submission = new Submission(id, missionId, files, explanation, Clocks.now());
         submissionRepository.save(PersistenceMapper.toEntity(submission));
         int ord = 0;
         for (SubmittedFile file : files) {

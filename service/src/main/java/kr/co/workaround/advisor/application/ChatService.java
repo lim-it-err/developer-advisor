@@ -12,7 +12,6 @@ import kr.co.workaround.advisor.domain.mission.Mission;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -48,7 +47,7 @@ public class ChatService {
                 .map(m -> m.getRole().name().toLowerCase() + ": " + m.getText())
                 .collect(Collectors.joining("\n"));
 
-        ChatMessage me = new ChatMessage(Ids.next("chat_"), missionId, ChatRole.ME, text, Instant.now());
+        ChatMessage me = new ChatMessage(Ids.next("chat_"), missionId, ChatRole.ME, text, Clocks.now());
         chatMessageRepository.save(PersistenceMapper.toEntity(me));
 
         Map<String, String> slots = Map.of(
@@ -59,7 +58,7 @@ public class ChatService {
         String prompt = promptLoader.render("chat-reply", slots);
         ChatReply reply = llmClient.complete(LlmRole.CHAT, prompt, ChatReply.class);
 
-        ChatMessage agent = new ChatMessage(Ids.next("chat_"), missionId, ChatRole.AGENT, reply.text(), Instant.now());
+        ChatMessage agent = new ChatMessage(Ids.next("chat_"), missionId, ChatRole.AGENT, reply.text(), Clocks.now());
         chatMessageRepository.save(PersistenceMapper.toEntity(agent));
 
         return List.of(me, agent);
