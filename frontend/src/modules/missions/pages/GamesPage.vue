@@ -1,13 +1,30 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { useMissions } from '../store/missions.js'
 import InsightCard from '../components/InsightCard.vue'
 import cards from '../data/sampleCards.js'
 
 const store = useMissions()
+const route = useRoute()
 
 const deck = ref('reading')
-const shownCards = computed(() => (deck.value === 'reading' ? cards.readingCards : cards.cinemaCards))
+const linkedCardId = computed(() => (typeof route.query.card === 'string' ? route.query.card : ''))
+const linkedDeck = computed(() => {
+  if (cards.readingCards.some((card) => card.id === linkedCardId.value)) return 'reading'
+  if (cards.cinemaCards.some((card) => card.id === linkedCardId.value)) return 'cinema'
+  return null
+})
+const shownCards = computed(() => {
+  const list = deck.value === 'reading' ? cards.readingCards : cards.cinemaCards
+  const linkedIndex = list.findIndex((card) => card.id === linkedCardId.value)
+  if (linkedIndex <= 0) return list
+  return [list[linkedIndex], ...list.slice(0, linkedIndex), ...list.slice(linkedIndex + 1)]
+})
+
+watch(linkedDeck, (value) => {
+  if (value) deck.value = value
+}, { immediate: true })
 
 // 코드를 안 쓰고 즉시 할 수 있는 미션 유형만 골라 스낵 목록으로.
 const NO_CODE_TYPES = ['코드 판독', '배역극', '설계 리뷰']
@@ -36,7 +53,12 @@ const upcoming = [
         <button class="deck-tab" :class="{ active: deck === 'cinema' }" @click="deck = 'cinema'">🎬 시사회 ({{ cards.cinemaCards.length }})</button>
       </div>
       <div class="card-list">
-        <InsightCard v-for="c in shownCards" :key="c.id" :card="c" />
+        <InsightCard
+          v-for="c in shownCards"
+          :key="c.id"
+          :card="c"
+          :initial-open="c.id === linkedCardId"
+        />
       </div>
     </section>
 

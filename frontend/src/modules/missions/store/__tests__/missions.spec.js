@@ -139,6 +139,32 @@ describe('missions store 특성화', () => {
     expect(secondDeck).toEqual(firstDeck)
   })
 
+  it('수요일과 주말 첫 슬롯을 날짜별 독서·시사회 카드로 결정한다', async () => {
+    const store = await loadStore()
+
+    const wednesday = store.routineForWeekday(3)
+    const saturday = store.routineForWeekday(6)
+
+    expect(wednesday.slots[0]).toMatchObject({
+      kind: 'readingCard',
+      missionId: null,
+      label: '독서 카드 읽기',
+      manualCheckable: true,
+      checkIndex: 0,
+    })
+    expect(wednesday.slots[0].linkTo).toMatch(/^\/games\?card=read-/)
+    expect(saturday.slots[0]).toMatchObject({
+      kind: 'cinemaCard',
+      missionId: null,
+      label: '시사회 카드 보기',
+      manualCheckable: true,
+      checkIndex: 0,
+    })
+    expect(saturday.slots[0].linkTo).toMatch(/^\/games\?card=film-/)
+    expect(store.routineForWeekday(3).slots[0]).toEqual(wednesday.slots[0])
+    expect(store.routineForWeekday(6).slots[0]).toEqual(saturday.slots[0])
+  })
+
   it('오늘부터 이어진 완료일만 스트릭으로 세고 단절 뒤의 기록은 제외한다', async () => {
     const continuous = await loadStore({
       routineChecks: { '2026-08-03': { 0: true } },
