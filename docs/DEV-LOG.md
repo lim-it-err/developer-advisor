@@ -9,3 +9,4 @@
 - 2026-08-03 claude Codex 브랜치 2개(e2e·vitest) main 병합, 통합 검증 그린 (merge)
 - 2026-08-03 claude dev-003(docker-ci) 병합 — 첫 CI 워크플로 가동 (merge)
 - 2026-08-03 claude CI 핫픽스: Instant 마이크로초 절단(Clocks) — 리눅스 나노초 왕복 동등성 (main)
+- 2026-08-03 claude 스와이프 카드 6장 작성 (sampleSwipeCards.js, dev-005 재료)
