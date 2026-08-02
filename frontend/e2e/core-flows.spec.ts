@@ -131,7 +131,7 @@ test('머지 or 반려: 375px에서 5장 판정 후 세션 요약을 본다', as
   await page.getByRole('link', { name: '미니게임', exact: true }).click()
   await page.getByRole('link', { name: /머지 or 반려/ }).click()
   await expect(page).toHaveURL(/\/routine\/swipe$/)
-  await expect(page.getByText('🃏 샘플 카드')).toBeVisible()
+  await expect(page.getByText(/오늘의 판정 5장/)).toBeVisible()
 
   for (let index = 0; index < 5; index++) {
     await page.getByRole('button', { name: '✅ 머지' }).click()
@@ -145,4 +145,24 @@ test('머지 or 반려: 375px에서 5장 판정 후 세션 요약을 본다', as
   await expect(page.getByText('근거 적중')).toBeVisible()
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
   expect(errors).toEqual([])
+})
+
+test('시즌: 루틴 수동 체크가 교양 +1과 최근 적립 로그에 반영된다', async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-08-03T08:00:00'))
+  await page.evaluate(() => {
+    localStorage.setItem('advisor.learner.v1', JSON.stringify({
+      learner: { nickname: 'Codex E2E' },
+      seasonStats: { seasonStart: '2026-08-03', gains: [] },
+    }))
+  })
+  await page.reload()
+
+  await page.getByRole('link', { name: '오늘의 훈련', exact: true }).click()
+  await page.getByRole('button', { name: '읽었어요 ✓' }).click()
+  await page.getByRole('link', { name: '시즌', exact: true }).click()
+
+  await expect(page).toHaveURL(/\/season$/)
+  await expect(page.locator('[data-stat="culture"] .stat-value')).toHaveText('1')
+  await expect(page.getByText('루틴 수동 체크')).toBeVisible()
+  await expect(page.getByText('+1', { exact: true })).toBeVisible()
 })

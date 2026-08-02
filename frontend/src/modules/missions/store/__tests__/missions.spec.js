@@ -187,4 +187,39 @@ describe('missions store 특성화', () => {
     expect(store.state.learner.nickname).toBe('abcdefghijkl')
     expect(JSON.parse(localStorage.getItem(STORAGE_KEY)).learner.nickname).toBe('abcdefghijkl')
   })
+
+  it('기존 저장 blob을 보존하며 루틴 체크를 교양 스탯에 하루 한 번 적립한다', async () => {
+    const store = await loadStore({ learner: { nickname: '기존 사용자' } })
+
+    expect(store.state.seasonStats).toEqual({ seasonStart: '2026-08-03', gains: [] })
+    store.checkRoutineSlot(0)
+    store.checkRoutineSlot(0)
+
+    expect(store.seasonOverview().totals.culture).toBe(1)
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY))
+    expect(saved.learner.nickname).toBe('기존 사용자')
+    expect(saved.seasonStats.gains).toEqual([
+      { date: '2026-08-03', stat: 'culture', amount: 1, source: 'routine-check:0' },
+    ])
+  })
+
+  it('기존 제출 액션과 적중 결말을 4스탯에 중복 없이 적립한다', async () => {
+    const store = await loadStore()
+
+    store.predictEnding('s1-wine-01', 'hotfix')
+    await store.submitCode('s1-wine-01', [{ path: 'Wine.java', content: 'class Wine {}' }])
+    store.submitExplanation('s1-wine-01', '설명')
+    store.submitExplanation('s1-wine-01', '설명 수정')
+    store.submitPlannerDeliverable('s1-wine-01', 'meeting', '합의')
+    store.submitPlannerDeliverable('s1-wine-01', 'review', '검토')
+    expect(store.settleEndingPrediction('s1-wine-01', 'hotfix')).toBe(true)
+    expect(store.settleEndingPrediction('s1-wine-01', 'hotfix')).toBe(false)
+
+    expect(store.seasonOverview().totals).toEqual({
+      vision: 3,
+      voice: 3,
+      judgment: 5,
+      culture: 0,
+    })
+  })
 })

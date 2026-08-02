@@ -37,6 +37,7 @@ function onNicknameCancelled() {
           @click="openNicknamePrompt"
         >👤 {{ nickname }}</button>
         <router-link to="/routine" class="nav-link">오늘의 훈련</router-link>
+        <router-link to="/season" class="nav-link">시즌</router-link>
         <router-link to="/games" class="nav-link">미니게임</router-link>
         <router-link to="/projects" class="nav-link">프로젝트</router-link>
         <router-link to="/missions/history" class="nav-link">성장 기록</router-link>

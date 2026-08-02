@@ -4,6 +4,13 @@ import { reactive } from 'vue'
 import sample from '../data/sampleContent.js'
 import projectSample from '../data/sampleProjects.js'
 import cards from '../data/sampleCards.js'
+import seasons from '../data/sampleSeasons.js'
+import {
+  buildSeasonOverview,
+  localDateKey,
+  normalizeSeasonStats,
+  recordSeasonGain,
+} from './seasonStats.js'
 
 const STORAGE_KEY = 'advisor.learner.v1'
 
@@ -67,10 +74,7 @@ function clampScore(n) {
 // 로컬 자정 기준 'YYYY-MM-DD'. 커밋 시각 판정(오늘 제출/설명 여부)에 UTC를 쓰면
 // 자정 근처에서 하루가 밀릴 수 있어 항상 로컬 기준으로 통일한다.
 function localDateStr(d = new Date()) {
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${day}`
+  return localDateKey(d)
 }
 
 // 날짜 문자열을 회전 인덱스로 — 같은 날엔 항상 같은 미션이 뽑히고, 날짜가 바뀌면 순환한다.
@@ -494,6 +498,8 @@ const state = reactive({
   findingsDrafts: persisted.findingsDrafts ?? {},
   // 입력 원칙 — 결말 예측 투표(원탭). missionId -> 'calm' | 'hotfix' | 'dawn'
   endingPredictions: persisted.endingPredictions ?? {},
+  // 4주 시즌 스탯. 구버전 저장 데이터에는 키가 없으므로 오늘을 시즌 시작일로 삼는다.
+  seasonStats: normalizeSeasonStats(persisted.seasonStats),
 })
 
 function persist() {
@@ -512,8 +518,13 @@ function persist() {
       routineChecks: state.routineChecks,
       findingsDrafts: state.findingsDrafts,
       endingPredictions: state.endingPredictions,
+      seasonStats: state.seasonStats,
     }),
   )
+}
+
+function gainSeasonStat(stat, amount, source) {
+  return recordSeasonGain(state.seasonStats, { stat, amount, source })
 }
 
 // 리뷰 조회 공통 헬퍼: 실제 저장된 리뷰가 있으면 그걸, 없으면(그리고 제출 이력이 있으면) 샘플로 폴백.
@@ -582,7 +593,12 @@ export function useMissions() {
       const dateStr = localDateStr()
       const entry = (state.routineChecks[dateStr] ??= {})
       entry[checkIndex] = true
+      gainSeasonStat('culture', 1, `routine-check:${checkIndex}`)
       persist()
+    },
+
+    seasonOverview() {
+      return buildSeasonOverview(state.seasonStats, state.routineHistory, seasons.seasonEndings)
     },
 
     // ---- 입력 원칙: 선택 우선, 타이핑은 선택 ----
@@ -605,6 +621,13 @@ export function useMissions() {
     predictEnding(missionId, grade) {
       state.endingPredictions[missionId] = grade
       persist()
+    },
+
+    settleEndingPrediction(missionId, actualGrade) {
+      if (!actualGrade || state.endingPredictions[missionId] !== actualGrade) return false
+      const gained = gainSeasonStat('judgment', 2, `ending-prediction:${missionId}`)
+      if (gained) persist()
+      return gained
     },
 
     // ---- 프로젝트 모드(맨땅에서): 여정 지도 캠페인 ----
@@ -663,6 +686,7 @@ export function useMissions() {
         by: state.learner.nickname || null,
       }
       versions.push(entry)
+      gainSeasonStat('vision', 3, `mission-submit:${missionId}`)
       persist()
 
       if (!mission) return false
@@ -706,6 +730,7 @@ export function useMissions() {
         submittedAt: new Date().toISOString(),
         by: state.learner.nickname || null,
       }
+      gainSeasonStat('voice', 3, `explanation:${missionId}`)
       persist()
     },
 
@@ -812,6 +837,7 @@ export function useMissions() {
         submittedAt: new Date().toISOString(),
         by: state.learner.nickname || null,
       }
+      if (kind === 'meeting') gainSeasonStat('judgment', 3, `planner-agreement:${missionId}`)
       persist()
     },
 

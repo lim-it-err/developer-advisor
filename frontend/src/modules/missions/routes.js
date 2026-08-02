@@ -22,6 +22,11 @@ export const missionRoutes = [
     component: () => import('./pages/SwipeReviewPage.vue'),
   },
   {
+    path: '/season',
+    name: 'season-stats',
+    component: () => import('./pages/SeasonPage.vue'),
+  },
+  {
     path: '/missions/history',
     name: 'mission-history',
     component: () => import('./pages/HistoryPage.vue'),

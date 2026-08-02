@@ -26,6 +26,13 @@ const activeIndex = computed(() =>
 )
 const review = computed(() => reviewVersions.value[activeIndex.value] ?? null)
 
+// 실제 결말이 공개되는 리뷰 시점에 예측 적중을 정산한다. store가 같은 날 같은 미션의 중복을 막는다.
+watch(
+  [() => route.params.id, () => review.value?.ending?.grade],
+  ([missionId, actualGrade]) => store.settleEndingPrediction(missionId, actualGrade),
+  { immediate: true },
+)
+
 const explainFeedback = computed(() => store.getExplainFeedback(route.params.id))
 const reputation = computed(() => review.value?.reputation ?? null)
 const explanation = computed(() => store.state.explanations[route.params.id])
