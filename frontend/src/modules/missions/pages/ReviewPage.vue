@@ -30,6 +30,9 @@ const explainFeedback = computed(() => store.getExplainFeedback(route.params.id)
 const reputation = computed(() => review.value?.reputation ?? null)
 const explanation = computed(() => store.state.explanations[route.params.id])
 
+// 입력 원칙 — 선택 우선: 결말 예측 투표 결과를 실제 결말과 대조.
+const prediction = computed(() => store.getEndingPrediction(route.params.id))
+
 function formatDate(iso) {
   return iso ? new Date(iso).toLocaleString('ko-KR') : ''
 }
@@ -167,6 +170,16 @@ function itemColor(item) {
         <span class="stamp-title">{{ ENDING_ICONS[review.ending.grade] ?? '❓' }} {{ review.ending.title }}</span>
         <span v-if="review.ending.grade === 'hidden'" class="stamp-unlock">🎉 히든 결말 해금!</span>
       </div>
+      <div
+        v-if="prediction && review.ending"
+        class="predict-result"
+        :class="{ hit: prediction === review.ending.grade }"
+      >
+        예측 {{ ENDING_ICONS[prediction] ?? '❓' }} vs 실제 {{ ENDING_ICONS[review.ending.grade] ?? '❓' }} —
+        {{ prediction === review.ending.grade
+          ? '예측 적중 — 자기 객관화도 실력입니다'
+          : '예측은 빗나갔습니다. 시스템은 늘 우리 예상보다 한 수 위입니다.' }}
+      </div>
       <MarkdownBlock :source="review.scenario" />
     </section>
 
@@ -291,6 +304,19 @@ h1 { font-size: 22px; margin: 12px 0 8px; }
 .ending-stamp.hotfix { border-color: rgba(224, 175, 104, 0.4); }
 .ending-stamp.dawn { border-color: rgba(247, 118, 142, 0.4); }
 .ending-stamp.hidden { border-color: var(--accent); }
+.predict-result {
+  font-size: 13px;
+  color: var(--fg-dim);
+  margin: 0 0 14px;
+  padding: 8px 12px;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+}
+.predict-result.hit {
+  color: var(--good);
+  border-color: rgba(158, 206, 106, 0.4);
+  border-style: solid;
+}
 .scenario {
   border-color: rgba(122, 162, 247, 0.35);
   background: linear-gradient(180deg, rgba(122, 162, 247, 0.05), transparent 40%), var(--bg-card);

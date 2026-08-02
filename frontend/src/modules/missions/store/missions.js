@@ -61,6 +61,362 @@ function clampScore(n) {
   return Math.max(0, Math.min(100, Math.round(Number(n) || 0)))
 }
 
+// ---- 오늘의 훈련(데일리 루틴) 헬퍼 ----
+
+// 로컬 자정 기준 'YYYY-MM-DD'. 커밋 시각 판정(오늘 제출/설명 여부)에 UTC를 쓰면
+// 자정 근처에서 하루가 밀릴 수 있어 항상 로컬 기준으로 통일한다.
+function localDateStr(d = new Date()) {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+// 날짜 문자열을 회전 인덱스로 — 같은 날엔 항상 같은 미션이 뽑히고, 날짜가 바뀌면 순환한다.
+function dateSeed(dateStr) {
+  let h = 0
+  for (let i = 0; i < dateStr.length; i++) h = (h * 31 + dateStr.charCodeAt(i)) >>> 0
+  return h
+}
+
+function pickBySeed(list, seed) {
+  if (!list.length) return null
+  return list[seed % list.length]
+}
+
+const NO_CODE_TYPES = ['코드 판독', '설계 리뷰']
+const CODING_TYPES = ['도메인 로직 구현', '리팩토링']
+
+function hasSubmissionOn(state, missionId, dateStr) {
+  const versions = state.submissions[missionId]
+  if (!versions?.length) return false
+  return versions.some((v) => v.submittedAt && localDateStr(new Date(v.submittedAt)) === dateStr)
+}
+
+function hasExplanationOn(state, missionId, dateStr) {
+  const exp = state.explanations[missionId]
+  if (!exp?.submittedAt) return false
+  return localDateStr(new Date(exp.submittedAt)) === dateStr
+}
+
+function hasAnySubmissionOn(state, dateStr) {
+  return Object.values(state.submissions).some(
+    (versions) => versions?.some((v) => v.submittedAt && localDateStr(new Date(v.submittedAt)) === dateStr),
+  )
+}
+
+function hasProjectSubmissionOn(state, subMissionId, dateStr) {
+  const sub = state.projectSubmissions[subMissionId]
+  if (!sub?.submittedAt) return false
+  return localDateStr(new Date(sub.submittedAt)) === dateStr
+}
+
+function donePlannerReviewOn(state, missionId, dateStr) {
+  const rev = state.plannerSubmissions[missionId]?.review
+  if (!rev?.submittedAt) return false
+  return localDateStr(new Date(rev.submittedAt)) === dateStr
+}
+
+function submittedWithinDays(state, missionId, days) {
+  const versions = state.submissions[missionId]
+  if (!versions?.length) return false
+  const cutoff = Date.now() - days * 86_400_000
+  return versions.some((v) => v.submittedAt && new Date(v.submittedAt).getTime() >= cutoff)
+}
+
+function missionsWithoutSubmission(state, pool) {
+  return pool.filter((m) => !state.submissions[m.id]?.length)
+}
+
+function missionsWithoutExplanation(pool, state) {
+  return pool.filter((m) => !state.explanations[m.id])
+}
+
+// 우선순위대로 pool을 훑다가, 비어있지 않은 첫 pool에서 날짜-시드로 하나 뽑는다.
+// 콘텐츠가 아직 덜 채워진 상태(예: 특정 missionType이 하나도 없음)에서도 항상 뭔가를 반환하려는 방어적 선택기.
+function pickFromPools(pools, seed) {
+  for (const pool of pools) {
+    if (pool?.length) return pickBySeed(pool, seed)
+  }
+  return null
+}
+
+// 저녁 슬롯(설명 훈련) 공통 픽커: 제출은 했지만 설명이 없는 미션 우선, 소진 시 설명 없는 아무 미션.
+function pickExplainMission(state, seed) {
+  const submittedNoExplain = state.missions.filter(
+    (m) => state.submissions[m.id]?.length && !state.explanations[m.id],
+  )
+  const noExplainAny = missionsWithoutExplanation(state.missions, state)
+  return pickFromPools([submittedNoExplain, noExplainAny, state.missions], seed)
+}
+
+// 주말 슬롯: 다음에 풀어야 할 프로젝트 소미션(해금됐지만 미제출) — 여러 프로젝트가 있으면 날짜-시드로 순환.
+function nextProjectSubMission(state, seed) {
+  const candidates = []
+  for (const project of state.projects ?? []) {
+    const subs = project.subMissions ?? []
+    for (let i = 0; i < subs.length; i++) {
+      const sm = subs[i]
+      const unlocked = i === 0 || !!state.projectSubmissions[subs[i - 1].id]
+      if (unlocked && !state.projectSubmissions[sm.id]) {
+        candidates.push({ project, subMission: sm })
+        break
+      }
+    }
+  }
+  return candidates.length ? candidates[seed % candidates.length] : null
+}
+
+// 슬롯 하나의 표준 모양을 만든다. mission이 주어지면 title/링크를 미션 기준으로 채우고,
+// title/linkTo를 직접 넘기면(자유 슬롯 등 특정 미션에 안 묶이는 경우) 그걸 우선한다.
+function makeRoutineSlot(state, {
+  kind,
+  mission = null,
+  title = null,
+  linkTo,
+  emoji,
+  time,
+  label,
+  done,
+  dateStr,
+  manualCheckable = false,
+  checkIndex = null,
+  checkLabel = '읽었어요 ✓',
+}) {
+  const manualChecked = checkIndex != null ? !!state.routineChecks[dateStr]?.[checkIndex] : false
+  return {
+    kind,
+    missionId: mission?.id ?? null,
+    title: title ?? mission?.title ?? null,
+    linkTo: linkTo !== undefined ? linkTo : mission ? `/missions/${mission.id}` : null,
+    emoji,
+    time,
+    label,
+    done,
+    manualCheckable,
+    manualChecked,
+    checkIndex,
+    checkLabel,
+  }
+}
+
+// 월/화 아침 슬롯 공통 픽커: 원하는 missionType을 우선하되, 없으면 코드 판독/설계 리뷰 어느 쪽이든,
+// 그마저 없으면 아무 미션으로 물러난다. 라벨은 실제로 뽑힌 미션의 종류를 따른다 —
+// 콘텐츠가 덜 채워진 상태(예: 코드 판독이 아직 없음)에서 엉뚱한 라벨을 붙이지 않기 위해서다.
+function pickNoCodeMorningMission(state, preferredType, seed) {
+  const typed = state.missions.filter((m) => m.missionType === preferredType)
+  return pickFromPools(
+    [
+      missionsWithoutSubmission(state, typed),
+      typed,
+      state.missions.filter((m) => NO_CODE_TYPES.includes(m.missionType)),
+      missionsWithoutSubmission(state, state.missions),
+      state.missions,
+    ],
+    seed,
+  )
+}
+
+function noCodeReadLabel(mission) {
+  if (!mission) return '브리핑 읽기'
+  if (mission.missionType === '코드 판독') return '코드 판독 읽기'
+  if (mission.missionType === '설계 리뷰') return '설계 리뷰 미션 읽기'
+  return '브리핑 읽기' // 폴백: 코드 판독/설계 리뷰가 하나도 없어 아무 미션이나 뽑힌 경우
+}
+
+// ---- 요일별 루틴 템플릿 ----
+// 월~금은 3슬롯(출근길/점심/저녁), 주말은 2슬롯(오전/오후) — "3칸 강요 없음"의 주말 버전.
+
+function buildMonday(state, seed, dateStr) {
+  const mission = pickNoCodeMorningMission(state, '코드 판독', seed)
+  const lunchDone = mission ? hasSubmissionOn(state, mission.id, dateStr) : false
+  const readDone = lunchDone || !!state.routineChecks[dateStr]?.[0]
+  const explainMission = pickExplainMission(state, seed)
+  const explainDone = explainMission ? hasExplanationOn(state, explainMission.id, dateStr) : false
+
+  return {
+    name: '판독의 월요일',
+    tagline: '읽는 근육을 먼저 씁니다 — 코드 판독으로 여는 한 주.',
+    slots: [
+      makeRoutineSlot(state, { kind: 'read', mission, emoji: '🚆', time: '출근길 · ~11시', label: noCodeReadLabel(mission), done: readDone, dateStr, manualCheckable: true, checkIndex: 0 }),
+      makeRoutineSlot(state, { kind: 'submit', mission, emoji: '🍜', time: '점심 · 11~17시', label: 'findings 제출', done: lunchDone, dateStr }),
+      makeRoutineSlot(state, { kind: 'explain', mission: explainMission, emoji: '🌙', time: '저녁 · 17시~', label: '설명 훈련', done: explainDone, dateStr }),
+    ],
+  }
+}
+
+function buildTuesday(state, seed, dateStr) {
+  const mission = pickNoCodeMorningMission(state, '설계 리뷰', seed)
+  const lunchDone = mission ? hasSubmissionOn(state, mission.id, dateStr) : false
+  const readDone = lunchDone || !!state.routineChecks[dateStr]?.[0]
+  const explainMission = pickExplainMission(state, seed)
+  const explainDone = explainMission ? hasExplanationOn(state, explainMission.id, dateStr) : false
+
+  return {
+    name: '설계자의 화요일',
+    tagline: '코드 없이 비평만 합니다 — 설계 리뷰의 날.',
+    slots: [
+      makeRoutineSlot(state, { kind: 'read', mission, emoji: '🚆', time: '출근길 · ~11시', label: noCodeReadLabel(mission), done: readDone, dateStr, manualCheckable: true, checkIndex: 0 }),
+      makeRoutineSlot(state, { kind: 'submit', mission, emoji: '🍜', time: '점심 · 11~17시', label: 'critique 제출', done: lunchDone, dateStr }),
+      makeRoutineSlot(state, { kind: 'explain', mission: explainMission, emoji: '🌙', time: '저녁 · 17시~', label: '꼬리 질문에 답 적기', done: explainDone, dateStr }),
+    ],
+  }
+}
+
+function buildWednesday(state, seed, dateStr) {
+  const noExplainAny = missionsWithoutExplanation(state.missions, state)
+  const missionA = pickFromPools([noExplainAny, state.missions], seed)
+  const aDone = missionA ? hasExplanationOn(state, missionA.id, dateStr) : false
+  const readDone = aDone || !!state.routineChecks[dateStr]?.[0]
+
+  const secondPool = noExplainAny.filter((m) => m.id !== missionA?.id)
+  const missionB = pickFromPools([secondPool, state.missions.filter((m) => m.id !== missionA?.id), state.missions], seed + 1)
+  const bDone = missionB ? hasExplanationOn(state, missionB.id, dateStr) : false
+
+  return {
+    name: '언어화의 수요일',
+    tagline: '코드를 짜는 대신, 말이 되게 만드는 날.',
+    slots: [
+      makeRoutineSlot(state, { kind: 'read', mission: missionA, emoji: '🚆', time: '출근길 · ~11시', label: '브리핑 읽기', done: readDone, dateStr, manualCheckable: true, checkIndex: 0 }),
+      makeRoutineSlot(state, { kind: 'explain', mission: missionA, emoji: '🍜', time: '점심 · 11~17시', label: '설명 훈련 (1)', done: aDone, dateStr }),
+      makeRoutineSlot(state, { kind: 'explain', mission: missionB, emoji: '🌙', time: '저녁 · 17시~', label: '설명 훈련 (2)', done: bDone, dateStr }),
+    ],
+  }
+}
+
+function buildThursday(state, seed, dateStr) {
+  const plannerCapable = state.missions.filter((m) => (m.modes?.length ?? 0) > 1)
+  const mission = pickFromPools(
+    [plannerCapable.filter((m) => !state.plannerSubmissions[m.id]?.review), plannerCapable, state.missions],
+    seed,
+  )
+  const reviewDone = mission ? donePlannerReviewOn(state, mission.id, dateStr) : false
+  const readDone = reviewDone || !!state.routineChecks[dateStr]?.[0]
+  const explainMission = pickExplainMission(state, seed)
+  const explainDone = explainMission ? hasExplanationOn(state, explainMission.id, dateStr) : false
+
+  return {
+    name: '기획자의 목요일',
+    tagline: '코드가 아니라 결정을 씁니다 — 검토서로 여는 하루.',
+    slots: [
+      makeRoutineSlot(state, { kind: 'read', mission, emoji: '🚆', time: '출근길 · ~11시', label: mission ? '기획자 브리핑 읽기' : '브리핑 읽기', done: readDone, dateStr, manualCheckable: true, checkIndex: 0 }),
+      makeRoutineSlot(state, { kind: 'plannerReview', mission, emoji: '🍜', time: '점심 · 11~17시', label: '검토서 제출', done: reviewDone, dateStr }),
+      makeRoutineSlot(state, { kind: 'explain', mission: explainMission, emoji: '🌙', time: '저녁 · 17시~', label: '설명 훈련', done: explainDone, dateStr }),
+    ],
+  }
+}
+
+function buildFriday(state, seed, dateStr) {
+  const recentlySubmitted = state.missions.filter((m) => submittedWithinDays(state, m.id, 7))
+  const anySubmitted = state.missions.filter((m) => state.submissions[m.id]?.length)
+  const recapMission = pickFromPools([recentlySubmitted, anySubmitted, state.missions], seed)
+  const recapChecked = !!state.routineChecks[dateStr]?.[0]
+  const freeDone = hasAnySubmissionOn(state, dateStr) || !!state.routineChecks[dateStr]?.[1]
+  const explainMission = pickExplainMission(state, seed)
+  const explainDone = explainMission ? hasExplanationOn(state, explainMission.id, dateStr) : false
+
+  return {
+    name: '회고의 금요일',
+    tagline: '한 주를 되짚고, 미뤄둔 것 하나를 메웁니다.',
+    slots: [
+      makeRoutineSlot(state, {
+        kind: 'recapRead',
+        mission: recapMission,
+        linkTo: recapMission ? `/missions/${recapMission.id}/review` : '/missions',
+        emoji: '🚆',
+        time: '출근길 · ~11시',
+        label: recapMission ? '이번 주 리뷰 다시 읽기' : '아직 되짚을 리뷰가 없습니다',
+        done: recapChecked,
+        dateStr,
+        manualCheckable: true,
+        checkIndex: 0,
+      }),
+      makeRoutineSlot(state, {
+        kind: 'freeSubmit',
+        title: '오늘 안 한 것 아무거나 — 재제출도 좋습니다',
+        linkTo: '/missions',
+        emoji: '🍜',
+        time: '점심 · 11~17시',
+        label: '자유 제출',
+        done: freeDone,
+        dateStr,
+        manualCheckable: true,
+        checkIndex: 1,
+        checkLabel: '했어요 ✓',
+      }),
+      makeRoutineSlot(state, { kind: 'explain', mission: explainMission, emoji: '🌙', time: '저녁 · 17시~', label: '설명 훈련', done: explainDone, dateStr }),
+    ],
+  }
+}
+
+function buildWeekend(state, seed, dateStr) {
+  const codingPool = state.missions.filter((m) => CODING_TYPES.includes(m.missionType))
+  const codingMission = pickFromPools(
+    [missionsWithoutSubmission(state, codingPool), codingPool, missionsWithoutSubmission(state, state.missions), state.missions],
+    seed,
+  )
+  const codeDone = codingMission ? hasSubmissionOn(state, codingMission.id, dateStr) : false
+
+  const projectPick = nextProjectSubMission(state, seed)
+  const projectDone = projectPick ? hasProjectSubmissionOn(state, projectPick.subMission.id, dateStr) : false
+
+  return {
+    name: '몰입의 주말',
+    tagline: '슬롯은 두 개뿐입니다 — 코드 하나, 그리고 프로젝트 한 걸음.',
+    slots: [
+      makeRoutineSlot(state, {
+        kind: 'code',
+        mission: codingMission,
+        emoji: '🧩',
+        time: '오전 세션',
+        label: codingMission ? '코딩 미션 제출' : '오늘은 재료가 없습니다',
+        done: codeDone,
+        dateStr,
+      }),
+      makeRoutineSlot(state, {
+        kind: 'project',
+        mission: projectPick ? { id: projectPick.subMission.id, title: projectPick.subMission.title } : null,
+        linkTo: projectPick ? `/projects/${projectPick.project.id}` : '/projects',
+        emoji: '🚲',
+        time: '오후 세션',
+        label: projectPick ? '프로젝트 소미션 진행' : '오늘은 이어갈 소미션이 없습니다',
+        done: projectDone,
+        dateStr,
+      }),
+    ],
+  }
+}
+
+// 요일(0=일~6=토)에 맞는 템플릿 빌더로 분기.
+function buildRoutineForDate(state, dateStr) {
+  const seed = dateSeed(dateStr)
+  const weekday = new Date(`${dateStr}T00:00:00`).getDay()
+  switch (weekday) {
+    case 1: return buildMonday(state, seed, dateStr)
+    case 2: return buildTuesday(state, seed, dateStr)
+    case 3: return buildWednesday(state, seed, dateStr)
+    case 4: return buildThursday(state, seed, dateStr)
+    case 5: return buildFriday(state, seed, dateStr)
+    default: return buildWeekend(state, seed, dateStr) // 0=일, 6=토
+  }
+}
+
+// 오늘(또는 어제까지)을 종점으로 하는 연속일 스트릭. routineHistory[date] >= 1 인 날이 연속됐는지 센다.
+function computeStreak(state, todayCount) {
+  let streak = todayCount >= 1 ? 1 : 0
+  const cursor = new Date()
+  cursor.setDate(cursor.getDate() - 1)
+  // 안전장치: 무한루프 방지용 최대 탐색 일수.
+  for (let i = 0; i < 3650; i++) {
+    const ds = localDateStr(cursor)
+    const c = state.routineHistory[ds] ?? 0
+    if (c < 1) break
+    streak++
+    cursor.setDate(cursor.getDate() - 1)
+  }
+  return streak
+}
+
 // 제출 이력은 { files, submittedAt, by } 배열. 과거(단일 객체) 저장분을 배열로 감싸 마이그레이션한다.
 function migrateSubmissions(raw) {
   const result = {}
@@ -118,6 +474,15 @@ const state = reactive({
   projectSubmissions: persisted.projectSubmissions ?? {},
   // 실서비스 리뷰 결과. missionId -> [{ content, overall, reviewedAt }] (버전별, 성공한 리뷰만 append)
   reviews: persisted.reviews ?? {},
+  // 오늘의 훈련: 날짜별 완료 슬롯 수(0~3). { 'YYYY-MM-DD': number }
+  routineHistory: persisted.routineHistory ?? {},
+  // 오늘의 훈련: 읽기 전용 슬롯의 수동 체크('읽었어요' 등). { 'YYYY-MM-DD': { [slotCheckIndex]: boolean } }
+  routineChecks: persisted.routineChecks ?? {},
+  // 입력 원칙 — 선택 우선: 코드 판독/설계 리뷰 제출의 구조화 빌더 카드 초안.
+  // missionId -> [{ location, severity, symptom, cause, fix }]
+  findingsDrafts: persisted.findingsDrafts ?? {},
+  // 입력 원칙 — 결말 예측 투표(원탭). missionId -> 'calm' | 'hotfix' | 'dawn'
+  endingPredictions: persisted.endingPredictions ?? {},
 })
 
 function persist() {
@@ -132,6 +497,10 @@ function persist() {
       learner: state.learner,
       projectSubmissions: state.projectSubmissions,
       reviews: state.reviews,
+      routineHistory: state.routineHistory,
+      routineChecks: state.routineChecks,
+      findingsDrafts: state.findingsDrafts,
+      endingPredictions: state.endingPredictions,
     }),
   )
 }
@@ -166,6 +535,54 @@ export function useMissions() {
     missionStatus(id) {
       if (state.submissions[id]?.length) return '제출됨'
       return '진행 가능'
+    },
+
+    // ---- 오늘의 훈련(데일리 루틴) ----
+    // { date, name, tagline, slots: [...], streak } — 요일마다 다른 테마(월~금 3슬롯, 주말 2슬롯).
+    // 콘텐츠가 아직 덜 채워져 있어도(특정 missionType이 하나도 없어도) 항상 안전하게 폴백한다.
+    routineToday() {
+      const dateStr = localDateStr()
+      const built = buildRoutineForDate(state, dateStr)
+
+      const doneCount = built.slots.filter((s) => s.done).length
+      if (state.routineHistory[dateStr] !== doneCount) {
+        state.routineHistory[dateStr] = doneCount
+        persist()
+      }
+
+      const streak = computeStreak(state, doneCount)
+
+      return { date: dateStr, name: built.name, tagline: built.tagline, slots: built.slots, streak }
+    },
+
+    // 슬롯 하나의 수동 체크('읽었어요' 등). checkIndex는 routineToday()가 돌려준 slot.checkIndex.
+    checkRoutineSlot(checkIndex) {
+      const dateStr = localDateStr()
+      const entry = (state.routineChecks[dateStr] ??= {})
+      entry[checkIndex] = true
+      persist()
+    },
+
+    // ---- 입력 원칙: 선택 우선, 타이핑은 선택 ----
+
+    // findings/critique 구조화 빌더 — 카드 초안을 미션별로 저장(제출 전까지 유지).
+    getFindingsDraft(missionId) {
+      return state.findingsDrafts[missionId] ?? []
+    },
+
+    setFindingsDraft(missionId, cards) {
+      state.findingsDrafts[missionId] = cards
+      persist()
+    },
+
+    // 결말 예측 투표 — 원탭, 제출 전 한 번만 의미가 있다.
+    getEndingPrediction(missionId) {
+      return state.endingPredictions[missionId] ?? null
+    },
+
+    predictEnding(missionId, grade) {
+      state.endingPredictions[missionId] = grade
+      persist()
     },
 
     // ---- 프로젝트 모드(맨땅에서): 여정 지도 캠페인 ----

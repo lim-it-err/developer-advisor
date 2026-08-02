@@ -5,6 +5,7 @@ import { useMissions } from '../store/missions.js'
 import MarkdownBlock from '../components/MarkdownBlock.vue'
 import CodeViewer from '../components/CodeViewer.vue'
 import FileSubmitEditor from '../components/FileSubmitEditor.vue'
+import FindingsBuilder from '../components/FindingsBuilder.vue'
 import RubricList from '../components/RubricList.vue'
 import ChatPanel from '../components/ChatPanel.vue'
 import PlannerMeetingPanel from '../components/PlannerMeetingPanel.vue'
@@ -17,6 +18,10 @@ const store = useMissions()
 
 const mission = computed(() => store.getMission(route.params.id))
 const isDomainLogic = computed(() => mission.value?.missionType === '도메인 로직 구현')
+// 코드 판독/설계 리뷰 — 실행 없이 읽고 판정만 하는 미션. 제출을 구조화 빌더(findings.md)로 유도한다.
+const isNoCodeMission = computed(() => ['코드 판독', '설계 리뷰'].includes(mission.value?.missionType))
+// 입력 원칙 — 선택 우선: 기본은 구조화 빌더, 원하면 자유 작성으로 전환 가능(둘 다 같은 제출로 이어짐).
+const useBuilder = ref(true)
 
 // 기획자 모드: mission.modes가 2개 이상일 때만 선택창 표시. 기본은 항상 개발자 모드.
 const MODE_META = {
@@ -32,6 +37,13 @@ const ENDING_META = {
   hotfix: { icon: '🔧' },
   dawn: { icon: '🚨' },
   hidden: { icon: '🔒' },
+}
+
+// 입력 원칙 — 선택 우선: 결말 예측 투표. hidden은 애초에 잠겨 있으므로 투표 대상에서 뺀다(신비로움 유지).
+const votableEndings = computed(() => (mission.value?.endings ?? []).filter((e) => e.grade !== 'hidden'))
+const endingPrediction = computed(() => (mission.value ? store.getEndingPrediction(mission.value.id) : null))
+function predictEnding(grade) {
+  store.predictEnding(mission.value.id, grade)
 }
 
 const TABS = ['도메인 브리핑', '미션', '제출', '설명 훈련']
@@ -89,6 +101,22 @@ function submit() {
 
 // 설명 훈련
 const explainText = ref(store.state.explanations[route.params.id]?.text ?? '')
+
+// 입력 원칙 — 선택 우선: 시작 뼈대 칩. 탭하면 템플릿이 삽입되고 채워 넣기만 하면 된다. 칩마다 1회.
+const EXPLAIN_CHIPS = computed(() => {
+  const audience = mission.value?.explainTask?.audience || '청자'
+  return [
+    { label: '비유로 시작', template: '비유로 말하면, 이건 마치 "…"와 같습니다. 왜냐하면 …이기 때문입니다.' },
+    { label: '결론부터', template: '결론부터 말하면, ○○입니다. 그 이유는 다음과 같습니다.\n1. …\n2. …' },
+    { label: '청자의 언어로', template: `${audience}가 알아야 할 건 이겁니다: …\n전문 용어 대신 이렇게 표현하면: …` },
+  ]
+})
+const usedExplainChips = ref([])
+function insertExplainTemplate(i, template) {
+  if (usedExplainChips.value.includes(i)) return
+  explainText.value = explainText.value.trim() ? `${explainText.value}\n\n${template}` : template
+  usedExplainChips.value.push(i)
+}
 
 function doSubmitExplanation() {
   store.submitExplanation(mission.value.id, explainText.value)
@@ -183,6 +211,22 @@ function submitExplanation() {
             <span class="ending-teaser">{{ e.teaser }}</span>
           </div>
         </div>
+
+        <!-- 입력 원칙 — 선택 우선: 결말 예측 투표. 원탭, 타이핑 0. -->
+        <div v-if="endingPrediction" class="predict-done">
+          예측 완료: {{ ENDING_META[endingPrediction]?.icon }} — 리뷰에서 실제 결말과 대조합니다.
+        </div>
+        <div v-else class="predict-vote">
+          <div class="predict-q">당신은 어느 결말에 도달할 것 같습니까?</div>
+          <div class="predict-buttons">
+            <button
+              v-for="e in votableEndings"
+              :key="e.grade"
+              class="predict-btn"
+              @click="predictEnding(e.grade)"
+            >{{ ENDING_META[e.grade]?.icon }} {{ e.title }}</button>
+          </div>
+        </div>
       </div>
 
       <div v-if="mission.providedFiles?.length" class="card block engine">
@@ -242,11 +286,25 @@ function submitExplanation() {
 
     <!-- 제출 -->
     <section v-if="tab === '제출'" class="panel">
-      <p class="dim">
-        로컬에서 작업한 결과 파일들을 붙여넣으세요. 파일 여러 개 제출 가능합니다.
-        제출하면 Reviewer Agent가 루브릭 기반으로 리뷰합니다.
-      </p>
-      <FileSubmitEditor v-model="files" />
+      <template v-if="isNoCodeMission">
+        <div class="submit-mode-row">
+          <p class="dim submit-mode-hint">
+            이 미션은 실행 없이 읽고 판정하는 훈련입니다. 카드로 쌓으면 findings.md가 자동으로 조립됩니다.
+          </p>
+          <button class="btn mode-switch" @click="useBuilder = !useBuilder">
+            {{ useBuilder ? '자유 작성으로 전환' : '구조화 빌더로 전환' }}
+          </button>
+        </div>
+        <FindingsBuilder v-if="useBuilder" :mission-id="mission.id" v-model="files" />
+        <FileSubmitEditor v-else v-model="files" />
+      </template>
+      <template v-else>
+        <p class="dim">
+          로컬에서 작업한 결과 파일들을 붙여넣으세요. 파일 여러 개 제출 가능합니다.
+          제출하면 Reviewer Agent가 루브릭 기반으로 리뷰합니다.
+        </p>
+        <FileSubmitEditor v-model="files" />
+      </template>
       <div class="submit-row">
         <button class="btn primary" :disabled="submitting" @click="submit">
           {{ submitting ? '리뷰 요청 중…' : '제출하고 리뷰 받기' }}
@@ -266,6 +324,16 @@ function submitExplanation() {
         <h2 class="panel-title">🎙 설명 과제</h2>
         <p><strong>청자:</strong> {{ mission.explainTask.audience }}</p>
         <MarkdownBlock :source="mission.explainTask.prompt" />
+      </div>
+      <div class="chip-row">
+        <button
+          v-for="(c, i) in EXPLAIN_CHIPS"
+          :key="i"
+          class="starter-chip"
+          :class="{ used: usedExplainChips.includes(i) }"
+          :disabled="usedExplainChips.includes(i)"
+          @click="insertExplainTemplate(i, c.template)"
+        >{{ c.label }}</button>
       </div>
       <textarea
         v-model="explainText"
@@ -319,6 +387,52 @@ function submitExplanation() {
   color: var(--fg-dim);
   font-size: 13.5px;
 }
+.predict-vote { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border); }
+.predict-q { font-weight: 600; font-size: 14px; margin-bottom: 10px; }
+.predict-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+.predict-btn {
+  background: var(--bg-soft);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--fg);
+  font-size: 13.5px;
+  font-weight: 600;
+  padding: 10px 16px;
+  min-height: 44px;
+}
+.predict-btn:hover { border-color: var(--accent); color: var(--accent); }
+.predict-done {
+  margin-top: 16px;
+  padding: 12px 14px;
+  border-top: 1px solid var(--border);
+  color: var(--accent);
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.submit-mode-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.submit-mode-hint { margin: 0; flex: 1 1 240px; }
+.mode-switch { font-size: 12.5px; padding: 8px 14px; flex-shrink: 0; }
+.chip-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.starter-chip {
+  background: var(--bg-soft);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--fg-dim);
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 8px 14px;
+  min-height: 36px;
+}
+.starter-chip:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+.starter-chip:disabled { opacity: 0.4; cursor: default; }
+.starter-chip.used { opacity: 0.4; }
 .chip.diff-easy { background: rgba(158, 206, 106, 0.15); color: var(--good); }
 .chip.diff-normal { background: var(--accent-soft); color: var(--accent); }
 .chip.diff-hard { background: rgba(247, 118, 142, 0.15); color: var(--bad); }
@@ -415,5 +529,9 @@ h1 { font-size: 22px; margin: 0; }
   .hidden-cases { font-size: 12.5px; padding: 8px 12px; }
   .submit-row { flex-wrap: wrap; margin-bottom: 64px; }
   .btn.primary { min-height: 40px; }
+  .predict-btn { flex: 1 1 100%; }
+  .submit-mode-row { flex-direction: column; align-items: stretch; }
+  .mode-switch { width: 100%; min-height: 44px; }
+  .starter-chip { flex: 1 1 auto; text-align: center; }
 }
 </style>

@@ -7,6 +7,11 @@ export const missionRoutes = [
     component: () => import('./pages/HomePage.vue'),
   },
   {
+    path: '/routine',
+    name: 'routine-today',
+    component: () => import('./pages/RoutinePage.vue'),
+  },
+  {
     path: '/missions/history',
     name: 'mission-history',
     component: () => import('./pages/HistoryPage.vue'),

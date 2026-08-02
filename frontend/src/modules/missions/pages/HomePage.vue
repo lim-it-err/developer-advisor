@@ -3,7 +3,11 @@ import { computed, ref } from 'vue'
 import { useMissions } from '../store/missions.js'
 import { PARTS } from '../store/missions.js'
 
-const { state, stages, missionStatus } = useMissions()
+const store = useMissions()
+const { state, stages, missionStatus } = store
+
+const routine = computed(() => store.routineToday())
+const routineDoneCount = computed(() => routine.value.slots.filter((s) => s.done).length)
 
 const stagesByPart = computed(() =>
   PARTS.map((p) => ({ ...p, stages: stages.filter((s) => s.part === p.no) })),
@@ -15,7 +19,7 @@ const doneCount = computed(() => Object.keys(state.submissions).length)
 const FILTER_GROUPS = [
   { key: 'difficulty', label: '난이도', options: ['Easy', 'Normal', 'Hard'] },
   { key: 'scope', label: '범위', options: ['단일 파일', '여러 파일', '모듈 경계'] },
-  { key: 'missionType', label: '유형', options: ['리팩토링', '기능 추가', '도메인 로직 구현', '설계 리뷰'] },
+  { key: 'missionType', label: '유형', options: ['리팩토링', '기능 추가', '도메인 로직 구현', '설계 리뷰', '코드 판독', '배역극'] },
 ]
 
 const selected = ref({ difficulty: [], scope: [], missionType: [] })
@@ -78,6 +82,19 @@ const stagesByPartFiltered = computed(() =>
         지금까지 <strong>{{ doneCount }}</strong>개 미션을 제출했습니다.
       </p>
     </section>
+
+    <router-link to="/routine" class="routine-banner card">
+      <span class="rb-emojis">
+        <span
+          v-for="(s, i) in routine.slots"
+          :key="i"
+          class="rb-emoji"
+          :class="{ done: s.done }"
+        >{{ s.emoji }}</span>
+      </span>
+      <span class="rb-text">오늘의 훈련 {{ routineDoneCount }}/{{ routine.slots.length }}</span>
+      <span class="rb-arrow">→</span>
+    </router-link>
 
     <router-link v-if="state.projects?.length" to="/projects" class="project-banner card">
       <span class="pb-text">🚲 새로운 모드: 프로젝트 — 맨땅에서</span>
@@ -180,6 +197,23 @@ const stagesByPartFiltered = computed(() =>
 <style scoped>
 .hero h1 { font-size: 24px; margin: 0 0 6px; }
 .sub { color: var(--fg-dim); margin: 0 0 26px; }
+.routine-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: var(--fg);
+  margin-bottom: 12px;
+  padding: 10px 18px;
+  border-color: var(--border);
+  transition: border-color 0.15s;
+}
+.routine-banner:hover { border-color: var(--accent); }
+.rb-emojis { display: inline-flex; gap: 4px; font-size: 16px; }
+.rb-emoji { opacity: 0.35; filter: grayscale(0.6); }
+.rb-emoji.done { opacity: 1; filter: none; }
+.rb-text { font-weight: 600; font-size: 13.5px; }
+.rb-arrow { color: var(--accent); font-weight: 700; margin-left: auto; }
 .project-banner {
   display: flex;
   align-items: center;

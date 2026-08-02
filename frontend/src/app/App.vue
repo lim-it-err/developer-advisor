@@ -36,6 +36,7 @@ function onNicknameCancelled() {
           title="닉네임 변경"
           @click="openNicknamePrompt"
         >👤 {{ nickname }}</button>
+        <router-link to="/routine" class="nav-link">오늘의 훈련</router-link>
         <router-link to="/projects" class="nav-link">프로젝트</router-link>
         <router-link to="/missions/history" class="nav-link">성장 기록</router-link>
       </nav>
@@ -135,10 +136,20 @@ function onNicknameCancelled() {
   .shell-header {
     padding: 14px 16px;
     gap: 10px;
+    flex-wrap: wrap;
   }
   .brand-name { font-size: 15px; }
   .brand-tag {
     display: none;
+  }
+  .nav {
+    flex-wrap: wrap;
+    row-gap: 6px;
+    column-gap: 10px;
+  }
+  .nav-link {
+    font-size: 12.5px;
+    min-height: 32px;
   }
   .shell-main {
     padding: 16px;
