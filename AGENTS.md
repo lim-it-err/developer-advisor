@@ -1,0 +1,47 @@
+# AGENTS.md — 에이전트 협업 규약
+
+> 이 저장소에서 작업하는 모든 AI 에이전트(Claude, Codex, 기타)가 읽는 공통 규약.
+> 사람 독자는 [README.md](README.md)부터.
+
+## 빌드 & 검증 (모든 PR의 최소 게이트)
+
+```bash
+# 프론트
+cd frontend && npm ci && npx vite build          # 반드시 통과
+# 백엔드 — mvn 실행 전 JDK 21 고정 필수 (기본 런타임이 JDK 25)
+cd service && ./run.sh test                       # 테스트 12+개 그린
+# 콘텐츠 무결성 (data 파일을 건드렸다면)
+cd frontend && node --input-type=module -e "import('./src/modules/missions/data/sampleContent.js').then(m=>{const d=m.default;console.assert(d.missions.every(x=>x.rubric.reduce((a,r)=>a+r.weight,0)===100),'rubric!=100');console.log('missions:',d.missions.length)})"
+```
+
+## 동결된 계약 (변경 금지 — 변경하려면 이슈로 먼저 제안)
+
+- **콘텐츠 스키마**: `frontend/src/modules/missions/data/sampleContent.js`의 미션/리뷰 필드명은 프론트-백엔드 공유 계약. 백엔드 record(`service/.../domain/**/content/*.java`)와 1:1.
+- **API 계약**: `docs/M1-BACKEND-PLAN.md` §4~5의 엔드포인트/DTO. 결말 grade는 `calm|hotfix|dawn|hidden` 고정.
+- **모듈 격리**: `frontend/src/modules/missions/` 밖을 참조하지 않는다 (platform 이식 단위).
+
+## 소유권 — 건드리지 말 것
+
+- `frontend/src/modules/missions/data/sampleContent.js`, `sampleProjects.js`: **콘텐츠는 Claude 전담.**
+  톤(유머·감성 원칙, docs/CURRICULUM.md)이 제품의 정체성이라 다른 에이전트가 수정하지 않는다.
+  단, **읽기·검증·"미션 풀어보기"는 환영** — 풀이 결과물은 'AI 코드 리뷰' 미션 소재로 쓰인다.
+- `docs/CURRICULUM.md`, `docs/PLAN.md`: 기획 문서 — 제안은 이슈로.
+
+## 환영하는 작업 (라벨로 배정)
+
+- `agent-task` + `type:test` — E2E(Playwright)/vitest/백엔드 테스트 확장
+- `agent-task` + `type:review` — 적대적 코드 리뷰 (부수러 온 감사 관점, PR 코멘트로)
+- `agent-task` + `type:infra` — Dockerfile, CI, lint 등 배관 공사
+- `agent-task` + `type:solve-mission` — 미션 풀이 (결과물은 콘텐츠 소재로 회수됨)
+
+## PR 규칙
+
+1. 브랜치명 `agent/<이름>/<주제>`, PR 본문에 검증 로그(위 게이트 실행 결과) 첨부.
+2. 다른 에이전트 계열의 리뷰 승인 없이 머지하지 않는다 (교차 리뷰 원칙).
+3. 커밋 메시지는 한국어 요약 + 상세. 콘텐츠 파일 diff가 포함된 PR은 자동 반려 대상.
+4. 스타일: 기존 코드의 관례를 따른다 (Vue 3 script setup, scoped style, 한국어 UI 텍스트).
+
+## 미션 풀이 제출 형식 (`type:solve-mission`)
+
+`solutions/<mission-id>/<agent-name>/` 아래에 풀이 파일 + `NOTES.md`(접근 방식, 자신 없는 부분 명시).
+정답처럼 쓰지 말 것 — 이 풀이는 학습자가 리뷰하는 훈련 소재다. 자연스러운 실수는 가치다.
