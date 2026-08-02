@@ -3,6 +3,7 @@
 import { reactive } from 'vue'
 import sample from '../data/sampleContent.js'
 import projectSample from '../data/sampleProjects.js'
+import cards from '../data/sampleCards.js'
 
 const STORAGE_KEY = 'advisor.learner.v1'
 
@@ -85,7 +86,6 @@ function pickBySeed(list, seed) {
 }
 
 const NO_CODE_TYPES = ['코드 판독', '설계 리뷰']
-const CODING_TYPES = ['도메인 로직 구현', '리팩토링']
 
 function hasSubmissionOn(state, missionId, dateStr) {
   const versions = state.submissions[missionId]
@@ -264,10 +264,11 @@ function buildTuesday(state, seed, dateStr) {
 }
 
 function buildWednesday(state, seed, dateStr) {
+  const card = pickBySeed(cards.readingCards, seed)
+  const cardDone = !!state.routineChecks[dateStr]?.[0]
   const noExplainAny = missionsWithoutExplanation(state.missions, state)
   const missionA = pickFromPools([noExplainAny, state.missions], seed)
   const aDone = missionA ? hasExplanationOn(state, missionA.id, dateStr) : false
-  const readDone = aDone || !!state.routineChecks[dateStr]?.[0]
 
   const secondPool = noExplainAny.filter((m) => m.id !== missionA?.id)
   const missionB = pickFromPools([secondPool, state.missions.filter((m) => m.id !== missionA?.id), state.missions], seed + 1)
@@ -277,7 +278,18 @@ function buildWednesday(state, seed, dateStr) {
     name: '언어화의 수요일',
     tagline: '코드를 짜는 대신, 말이 되게 만드는 날.',
     slots: [
-      makeRoutineSlot(state, { kind: 'read', mission: missionA, emoji: '🚆', time: '출근길 · ~11시', label: '브리핑 읽기', done: readDone, dateStr, manualCheckable: true, checkIndex: 0 }),
+      makeRoutineSlot(state, {
+        kind: 'readingCard',
+        title: card?.bookTitle ?? null,
+        linkTo: card ? `/games?card=${card.id}` : '/games',
+        emoji: card?.emoji ?? '📖',
+        time: '출근길 · ~11시',
+        label: '독서 카드 읽기',
+        done: cardDone,
+        dateStr,
+        manualCheckable: true,
+        checkIndex: 0,
+      }),
       makeRoutineSlot(state, { kind: 'explain', mission: missionA, emoji: '🍜', time: '점심 · 11~17시', label: '설명 훈련 (1)', done: aDone, dateStr }),
       makeRoutineSlot(state, { kind: 'explain', mission: missionB, emoji: '🌙', time: '저녁 · 17시~', label: '설명 훈련 (2)', done: bDone, dateStr }),
     ],
@@ -350,12 +362,8 @@ function buildFriday(state, seed, dateStr) {
 }
 
 function buildWeekend(state, seed, dateStr) {
-  const codingPool = state.missions.filter((m) => CODING_TYPES.includes(m.missionType))
-  const codingMission = pickFromPools(
-    [missionsWithoutSubmission(state, codingPool), codingPool, missionsWithoutSubmission(state, state.missions), state.missions],
-    seed,
-  )
-  const codeDone = codingMission ? hasSubmissionOn(state, codingMission.id, dateStr) : false
+  const card = pickBySeed(cards.cinemaCards, seed)
+  const cardDone = !!state.routineChecks[dateStr]?.[0]
 
   const projectPick = nextProjectSubMission(state, seed)
   const projectDone = projectPick ? hasProjectSubmissionOn(state, projectPick.subMission.id, dateStr) : false
@@ -365,13 +373,16 @@ function buildWeekend(state, seed, dateStr) {
     tagline: '슬롯은 두 개뿐입니다 — 코드 하나, 그리고 프로젝트 한 걸음.',
     slots: [
       makeRoutineSlot(state, {
-        kind: 'code',
-        mission: codingMission,
-        emoji: '🧩',
+        kind: 'cinemaCard',
+        title: card?.filmTitle ?? null,
+        linkTo: card ? `/games?card=${card.id}` : '/games',
+        emoji: card?.emoji ?? '🎬',
         time: '오전 세션',
-        label: codingMission ? '코딩 미션 제출' : '오늘은 재료가 없습니다',
-        done: codeDone,
+        label: '시사회 카드 보기',
+        done: cardDone,
         dateStr,
+        manualCheckable: true,
+        checkIndex: 0,
       }),
       makeRoutineSlot(state, {
         kind: 'project',

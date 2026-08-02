@@ -1,11 +1,16 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 
 const props = defineProps({
   card: { type: Object, required: true },
+  initialOpen: { type: Boolean, default: false },
 })
 
-const open = ref(false)
+const open = ref(props.initialOpen)
+
+watch(() => props.initialOpen, (value) => {
+  if (value) open.value = true
+})
 
 // 독서 카드(bookTitle/insight/csLink)와 시사회 카드(filmTitle/scene/systemReading)를 한 형태로 정규화.
 const view = computed(() => {
@@ -17,7 +22,7 @@ const view = computed(() => {
 </script>
 
 <template>
-  <div class="insight-card card" :class="{ open }">
+  <div class="insight-card card" :class="{ open }" :data-card-id="card.id">
     <button class="head" @click="open = !open">
       <span class="emoji">{{ card.emoji }}</span>
       <span class="titles">

@@ -84,6 +84,12 @@ test('프로젝트 여정: 첫 제출이 두 번째 소미션을 해금한다', 
 })
 
 test('루틴: 출근길 체크가 홈 배너 카운트에 반영된다', async ({ page }) => {
+  const errors: string[] = []
+  page.on('console', (message) => {
+    if (message.type() === 'error') errors.push(message.text())
+  })
+  page.on('pageerror', (error) => errors.push(error.message))
+
   await page.clock.setFixedTime(new Date('2026-08-03T08:00:00'))
   await page.getByRole('link', { name: '오늘의 훈련', exact: true }).click()
 
@@ -94,4 +100,22 @@ test('루틴: 출근길 체크가 홈 배너 카운트에 반영된다', async (
 
   await page.getByRole('link', { name: /Developer Advisor/ }).click()
   await expect(page.getByText('오늘의 훈련 1/3')).toBeVisible()
+
+  await page.getByRole('link', { name: '오늘의 훈련', exact: true }).click()
+  await page.getByRole('button', { name: '수', exact: true }).click()
+  const readingSlot = page.locator('.slot').first()
+  await expect(readingSlot.getByText('독서 카드 읽기')).toBeVisible()
+  const readingCardLink = readingSlot.getByRole('link')
+  await expect(readingCardLink).toHaveAttribute('href', /^\/games\?card=read-/)
+  const readingTitle = (await readingCardLink.textContent())?.trim()
+  await readingCardLink.click()
+  await expect(page).toHaveURL(/\/games\?card=read-/)
+  await expect(page.locator('.insight-card.open').first()).toContainText(readingTitle ?? '')
+
+  await page.goto('/routine')
+  await page.getByRole('button', { name: '토', exact: true }).click()
+  const cinemaSlot = page.locator('.slot').first()
+  await expect(cinemaSlot.getByText('시사회 카드 보기')).toBeVisible()
+  await expect(cinemaSlot.getByRole('link')).toHaveAttribute('href', /^\/games\?card=film-/)
+  expect(errors).toEqual([])
 })
