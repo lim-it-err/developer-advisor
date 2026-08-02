@@ -49,7 +49,7 @@ function decisionLabel(value) {
     <router-link to="/games" class="back-link">← 미니게임</router-link>
 
     <section class="hero">
-      <div class="eyebrow">🃏 샘플 카드</div>
+      <div class="eyebrow">🃏 오늘의 판정 5장</div>
       <h1>머지 or 반려</h1>
       <p class="dim">판정을 고르고, 근거 하나를 붙이세요. 질문 없이는 판단할 수 없는 코드도 있습니다.</p>
     </section>
