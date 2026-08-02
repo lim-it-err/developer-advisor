@@ -43,14 +43,14 @@ public final class PersistenceMapper {
     }
 
     public static SubmissionEntity toEntity(Submission s) {
-        return new SubmissionEntity(s.id(), s.missionId(), s.explanation(), s.submittedAt());
+        return new SubmissionEntity(s.id(), s.nickname(), s.missionId(), s.explanation(), s.submittedAt());
     }
 
     public static Submission toDomain(SubmissionEntity e, List<SubmittedFileEntity> files) {
         List<SubmittedFile> domainFiles = files.stream()
                 .map(f -> new SubmittedFile(f.getPath(), f.getContent()))
                 .toList();
-        return new Submission(e.getId(), e.getMissionId(), domainFiles, e.getExplanation(), e.getSubmittedAt());
+        return new Submission(e.getId(), e.getNickname(), e.getMissionId(), domainFiles, e.getExplanation(), e.getSubmittedAt());
     }
 
     public static SubmittedFileEntity toEntity(String submissionId, SubmittedFile f, int ord) {
@@ -58,11 +58,11 @@ public final class PersistenceMapper {
     }
 
     public static ReviewEntity toEntity(Review r) {
-        return new ReviewEntity(r.id(), r.submissionId(), r.overall(), r.status(), r.content(), r.createdAt());
+        return new ReviewEntity(r.id(), r.nickname(), r.submissionId(), r.overall(), r.status(), r.content(), r.createdAt());
     }
 
     public static Review toDomain(ReviewEntity e) {
-        return new Review(e.getId(), e.getSubmissionId(), e.getOverall(), e.getStatus(), e.getContent(), e.getCreatedAt());
+        return new Review(e.getId(), e.getNickname(), e.getSubmissionId(), e.getOverall(), e.getStatus(), e.getContent(), e.getCreatedAt());
     }
 
     public static ChatMessageEntity toEntity(ChatMessage m) {

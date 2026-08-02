@@ -21,6 +21,10 @@ public class ReviewEntity {
     @Id
     private String id;
 
+    // nullable for schema-update compatibility with records written before M2.
+    @Column(name = "nickname")
+    private String nickname;
+
     @Column(name = "submission_id", nullable = false, unique = true)
     private String submissionId;
 
@@ -40,9 +44,10 @@ public class ReviewEntity {
     protected ReviewEntity() {
     }
 
-    public ReviewEntity(String id, String submissionId, int overall, ReviewStatus status,
+    public ReviewEntity(String id, String nickname, String submissionId, int overall, ReviewStatus status,
                          ReviewContent content, Instant createdAt) {
         this.id = id;
+        this.nickname = nickname;
         this.submissionId = submissionId;
         this.overall = overall;
         this.status = status;
@@ -52,6 +57,10 @@ public class ReviewEntity {
 
     public String getId() {
         return id;
+    }
+
+    public String getNickname() {
+        return nickname;
     }
 
     public String getSubmissionId() {
