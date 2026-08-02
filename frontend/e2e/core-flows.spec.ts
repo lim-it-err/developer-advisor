@@ -119,3 +119,30 @@ test('루틴: 출근길 체크가 홈 배너 카운트에 반영된다', async (
   await expect(cinemaSlot.getByRole('link')).toHaveAttribute('href', /^\/games\?card=film-/)
   expect(errors).toEqual([])
 })
+
+test('머지 or 반려: 375px에서 5장 판정 후 세션 요약을 본다', async ({ page }) => {
+  const errors: string[] = []
+  page.on('console', (message) => {
+    if (message.type() === 'error') errors.push(message.text())
+  })
+  page.on('pageerror', (error) => errors.push(error.message))
+  await page.setViewportSize({ width: 375, height: 812 })
+
+  await page.getByRole('link', { name: '미니게임', exact: true }).click()
+  await page.getByRole('link', { name: /머지 or 반려/ }).click()
+  await expect(page).toHaveURL(/\/routine\/swipe$/)
+  await expect(page.getByText('🃏 샘플 카드')).toBeVisible()
+
+  for (let index = 0; index < 5; index++) {
+    await page.getByRole('button', { name: '✅ 머지' }).click()
+    await page.getByRole('button', { name: '정확성', exact: true }).click()
+    await expect(page.getByText(/^정답:/)).toBeVisible()
+    await page.getByRole('button', { name: index === 4 ? '결과 보기' : '다음 카드 →' }).click()
+  }
+
+  await expect(page.getByRole('heading', { name: '5장 판정 완료' })).toBeVisible()
+  await expect(page.getByText('맞은 판정')).toBeVisible()
+  await expect(page.getByText('근거 적중')).toBeVisible()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+  expect(errors).toEqual([])
+})
