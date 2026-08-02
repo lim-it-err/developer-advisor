@@ -7,3 +7,4 @@
 - 2026-08-03 claude 루틴 요일 미리보기 탭 (fcf84bd)
 - 2026-08-03 claude 미니게임 탭 /games 신설 (3c7babb)
 - 2026-08-03 claude Codex 브랜치 2개(e2e·vitest) main 병합, 통합 검증 그린 (merge)
+- 2026-08-03 claude dev-003(docker-ci) 병합 — 첫 CI 워크플로 가동 (merge)
