@@ -34,6 +34,17 @@ cd frontend && node --input-type=module -e "import('./src/modules/missions/data/
 - `agent-task` + `type:infra` — Dockerfile, CI, lint 등 배관 공사
 - `agent-task` + `type:solve-mission` — 미션 풀이 (결과물은 콘텐츠 소재로 회수됨)
 
+## 개발 내역 기록 (모든 에이전트 공통 — 사람이 추적할 수 있게)
+
+구현은 어떤 방식으로 하든 **내역이 파일로 남아야 한다.** 대화·세션 메모리는 기록이 아니다.
+
+1. **사양서 기반 작업** (collab/dev-queue/NNN): 완료 시 `collab/outbox/dev-NNN-report.md` — 변경 파일 목록, 검증 로그, 미완 사항. (기존 규칙)
+2. **큰 태스크를 스스로 쪼갤 때**: 구현 전에 breakdown을 사양서 파일에 추가하거나(`NNN` 문서에 체크리스트 추가) 별도 `NNN-breakdown.md`로 남긴다. 항목 단위로 진행 표시.
+3. **사양서 없는 작업** (버그 픽스, 즉흥 개선): `docs/DEV-LOG.md`에 한 줄 append — `- YYYY-MM-DD <agent> <무엇을> (<커밋/브랜치>)`.
+4. 커밋 메시지에도 항목 요약을 담는다. "misc fix" 금지.
+
+목적: Codex가 통짜로 구현하든 쪼개서 구현하든, 사람이 나중에 "무엇이 언제 왜 만들어졌는지"를 저장소만 보고 재구성할 수 있어야 한다.
+
 ## PR 규칙
 
 1. 브랜치명 `agent/<이름>/<주제>`, PR 본문에 검증 로그(위 게이트 실행 결과) 첨부.
