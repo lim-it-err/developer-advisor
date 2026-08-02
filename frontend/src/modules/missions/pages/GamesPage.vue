@@ -33,7 +33,6 @@ const snackMissions = computed(() =>
 )
 
 const upcoming = [
-  { emoji: '🃏', name: '머지 or 반려', desc: '코드 카드 판정 + 근거 토큰 — 개발 중' },
   { emoji: '🕵️', name: '사건 파일', desc: '장애 포스트모템 추리 연속극 — 준비 중' },
   { emoji: '📈', name: '시즌제 스탯', desc: '4주 시즌, 안목·언어화·판단·교양 — 준비 중' },
 ]
@@ -73,6 +72,18 @@ const upcoming = [
           </span>
         </router-link>
       </div>
+    </section>
+
+    <section class="block">
+      <h2 class="sec">🎮 바로 플레이</h2>
+      <router-link to="/routine/swipe" class="snack game-live card">
+        <span class="snack-emoji">🃏</span>
+        <span class="snack-body">
+          <span class="snack-title">머지 or 반려</span>
+          <span class="snack-type">코드 판정 1탭 + 근거 토큰 1탭 · 샘플 카드 5장</span>
+        </span>
+        <span class="play-arrow">플레이 →</span>
+      </router-link>
     </section>
 
     <section class="block">
@@ -124,6 +135,8 @@ const upcoming = [
   color: var(--fg);
 }
 .snack:hover { border-color: var(--accent); }
+.game-live { border-color: rgba(122, 162, 247, 0.45); }
+.play-arrow { margin-left: auto; color: var(--accent); font-size: 12.5px; font-weight: 700; white-space: nowrap; }
 .snack-emoji { font-size: 24px; flex-shrink: 0; }
 .snack-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .snack-type { font-size: 11.5px; color: var(--fg-dim); font-weight: 600; }

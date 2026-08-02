@@ -17,6 +17,11 @@ export const missionRoutes = [
     component: () => import('./pages/GamesPage.vue'),
   },
   {
+    path: '/routine/swipe',
+    name: 'swipe-review-game',
+    component: () => import('./pages/SwipeReviewPage.vue'),
+  },
+  {
     path: '/missions/history',
     name: 'mission-history',
     component: () => import('./pages/HistoryPage.vue'),
