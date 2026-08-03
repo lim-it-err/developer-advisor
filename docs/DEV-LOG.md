@@ -20,3 +20,4 @@
 - 2026-08-03 claude docker-compose+service README, 사건 파일 1편, dev-010·011 큐잉 (main)
 - 2026-08-03 claude dev-011(claude 계약 테스트) 병합 — 키 넣기 전 구간 전체 보증 (merge)
 - 2026-08-03 claude dev-010(사건 파일 UI) 병합 — 연속극 라이브 (merge)
+- 2026-08-03 claude 카드 갈래 질문 12종 작성 + dev-012 큐잉 (main)
