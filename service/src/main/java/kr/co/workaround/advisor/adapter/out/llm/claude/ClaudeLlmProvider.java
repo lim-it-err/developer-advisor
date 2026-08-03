@@ -11,6 +11,9 @@ import com.github.victools.jsonschema.module.jackson.JacksonModule;
 import kr.co.workaround.advisor.adapter.out.llm.LlmProperties;
 import kr.co.workaround.advisor.adapter.out.llm.LlmProvider;
 import kr.co.workaround.advisor.application.exception.LlmException;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatusCode;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
@@ -32,9 +35,15 @@ public class ClaudeLlmProvider implements LlmProvider {
     private final LlmProperties properties;
     private final RestClient restClient;
 
-    public ClaudeLlmProvider(LlmProperties properties) {
+    @Autowired
+    public ClaudeLlmProvider(LlmProperties properties, RestClient.Builder builder) {
         this.properties = properties;
-        this.restClient = RestClient.builder().build();
+        this.restClient = buildRestClient(properties.getClaude(), builder);
+    }
+
+    ClaudeLlmProvider(LlmProperties properties, RestClient restClient) {
+        this.properties = properties;
+        this.restClient = restClient;
     }
 
     @Override
@@ -54,7 +63,7 @@ public class ClaudeLlmProvider implements LlmProvider {
         );
         Map<String, Object> body = Map.of(
                 "model", model,
-                "max_tokens", 4096,
+                "max_tokens", cfg.getMaxTokens(),
                 "messages", List.of(Map.of("role", "user", "content", prompt)),
                 "tools", List.of(tool),
                 "tool_choice", Map.of("type", "tool", "name", "emit_result")
@@ -68,6 +77,9 @@ public class ClaudeLlmProvider implements LlmProvider {
                     .header("content-type", "application/json")
                     .body(body)
                     .retrieve()
+                    .onStatus(HttpStatusCode::isError, (request, response) -> {
+                        throw new LlmException("Claude call failed with HTTP " + response.getStatusCode().value());
+                    })
                     .body(String.class);
 
             JsonNode root = MAPPER.readTree(responseBody);
@@ -76,12 +88,19 @@ public class ClaudeLlmProvider implements LlmProvider {
                     return MAPPER.treeToValue(block.path("input"), type);
                 }
             }
-            throw new LlmException("Claude response had no tool_use block: " + responseBody);
+            throw new LlmException("Claude response had no tool_use block");
         } catch (LlmException e) {
             throw e;
         } catch (Exception e) {
-            throw new LlmException("Claude call failed: " + e.getMessage(), e);
+            throw new LlmException("Claude call failed before a valid structured response was received", e);
         }
+    }
+
+    private static RestClient buildRestClient(LlmProperties.Claude cfg, RestClient.Builder builder) {
+        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+        requestFactory.setConnectTimeout(cfg.getConnectTimeout());
+        requestFactory.setReadTimeout(cfg.getReadTimeout());
+        return builder.requestFactory(requestFactory).build();
     }
 
     private JsonNode generateSchema(Class<?> type) {

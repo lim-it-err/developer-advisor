@@ -9,3 +9,6 @@ advisor:
       base-url: https://api.anthropic.com
       api-key: ${ANTHROPIC_API_KEY:}
       version: "2023-06-01"
+      max-tokens: 4096
+      connect-timeout: 5s
+      read-timeout: 120s

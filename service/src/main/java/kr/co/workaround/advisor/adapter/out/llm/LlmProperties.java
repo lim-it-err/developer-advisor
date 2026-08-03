@@ -2,6 +2,7 @@ package kr.co.workaround.advisor.adapter.out.llm;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -64,6 +65,9 @@ public class LlmProperties {
         private String baseUrl = "https://api.anthropic.com";
         private String apiKey = "";
         private String version = "2023-06-01";
+        private int maxTokens = 4096;
+        private Duration connectTimeout = Duration.ofSeconds(5);
+        private Duration readTimeout = Duration.ofSeconds(120);
 
         public String getBaseUrl() {
             return baseUrl;
@@ -87,6 +91,30 @@ public class LlmProperties {
 
         public void setVersion(String version) {
             this.version = version;
+        }
+
+        public int getMaxTokens() {
+            return maxTokens;
+        }
+
+        public void setMaxTokens(int maxTokens) {
+            this.maxTokens = maxTokens;
+        }
+
+        public Duration getConnectTimeout() {
+            return connectTimeout;
+        }
+
+        public void setConnectTimeout(Duration connectTimeout) {
+            this.connectTimeout = connectTimeout;
+        }
+
+        public Duration getReadTimeout() {
+            return readTimeout;
+        }
+
+        public void setReadTimeout(Duration readTimeout) {
+            this.readTimeout = readTimeout;
         }
     }
 
