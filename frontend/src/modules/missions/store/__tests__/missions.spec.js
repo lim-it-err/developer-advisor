@@ -274,6 +274,30 @@ describe('missions store 특성화', () => {
     })
   })
 
+  it('사건 파일은 날짜마다 한 단서만 열고 지목을 한 번만 기록한다', async () => {
+    const store = await loadStore()
+    const caseId = 'case-vanishing-points-01'
+
+    expect(store.openCase(caseId, 5)).toMatchObject({
+      openedDays: 1,
+      lastOpenedDate: '2026-08-03',
+    })
+    expect(store.openCase(caseId, 5).openedDays).toBe(1)
+
+    vi.setSystemTime(new Date('2026-08-04T09:00:00+09:00'))
+    expect(store.openCase(caseId, 5).openedDays).toBe(2)
+    store.bingeCase(caseId, 5)
+    expect(store.state.caseProgress[caseId].openedDays).toBe(5)
+
+    expect(store.chooseCaseVerdict(caseId, 'cron-idempotency', 'cron-idempotency', 5)).toBe(true)
+    expect(store.chooseCaseVerdict(caseId, 'cache', 'cron-idempotency', 5)).toBe(false)
+    expect(store.state.caseProgress[caseId].verdict).toBe('cron-idempotency')
+    expect(store.seasonOverview().totals.judgment).toBe(3)
+
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY))
+    expect(saved.caseProgress[caseId]).toMatchObject({ openedDays: 5, verdict: 'cron-idempotency' })
+  })
+
   it('닉네임 재방문 시 서버 제출 합집합과 최신 설명·journal을 로컬에 병합한다', async () => {
     const missionId = 's1-wine-01'
     const localSubmission = {

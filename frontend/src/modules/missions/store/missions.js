@@ -539,6 +539,8 @@ const state = reactive({
   findingsDrafts: persisted.findingsDrafts ?? {},
   // 입력 원칙 — 결말 예측 투표(원탭). missionId -> 'calm' | 'hotfix' | 'dawn'
   endingPredictions: persisted.endingPredictions ?? {},
+  // 사건 파일 진행도. caseId -> { openedDays, lastOpenedDate, verdict? }
+  caseProgress: persisted.caseProgress ?? {},
   // 4주 시즌 스탯. 구버전 저장 데이터에는 키가 없으므로 오늘을 시즌 시작일로 삼는다.
   seasonStats: normalizeSeasonStats(persisted.seasonStats),
 })
@@ -551,6 +553,7 @@ const JOURNAL_KEYS = [
   'routineChecks',
   'findingsDrafts',
   'endingPredictions',
+  'caseProgress',
   'seasonStats',
 ]
 
@@ -575,6 +578,7 @@ function persist({ syncJournal = true } = {}) {
       routineChecks: state.routineChecks,
       findingsDrafts: state.findingsDrafts,
       endingPredictions: state.endingPredictions,
+      caseProgress: state.caseProgress,
       seasonStats: state.seasonStats,
       _sync: { journalUpdatedAt },
     }),
@@ -938,6 +942,56 @@ export function useMissions() {
 
     seasonOverview() {
       return buildSeasonOverview(state.seasonStats, state.routineHistory, seasons.seasonEndings)
+    },
+
+    // ---- 사건 파일(장애 포스트모템 추리 연속극) ----
+
+    openCase(caseId, totalDays) {
+      const today = localDateStr()
+      const maximum = Math.max(1, Number(totalDays) || 1)
+      const existing = state.caseProgress[caseId]
+      if (!existing) {
+        state.caseProgress[caseId] = { openedDays: 1, lastOpenedDate: today }
+        persist()
+        return state.caseProgress[caseId]
+      }
+
+      const openedDays = Math.min(maximum, Math.max(1, Number(existing.openedDays) || 1))
+      const next = { ...existing, openedDays }
+      if (!existing.lastOpenedDate) {
+        next.lastOpenedDate = today
+      } else if (existing.lastOpenedDate < today && openedDays < maximum) {
+        next.openedDays = openedDays + 1
+        next.lastOpenedDate = today
+      }
+
+      if (JSON.stringify(next) !== JSON.stringify(existing)) {
+        state.caseProgress[caseId] = next
+        persist()
+      }
+      return state.caseProgress[caseId]
+    },
+
+    bingeCase(caseId, totalDays) {
+      const maximum = Math.max(1, Number(totalDays) || 1)
+      const existing = state.caseProgress[caseId] ?? {}
+      state.caseProgress[caseId] = {
+        ...existing,
+        openedDays: maximum,
+        lastOpenedDate: localDateStr(),
+      }
+      persist()
+    },
+
+    chooseCaseVerdict(caseId, verdict, answerKey, totalDays) {
+      const progress = state.caseProgress[caseId]
+      if (!progress || progress.verdict || !verdict || progress.openedDays < totalDays) return false
+
+      progress.verdict = verdict
+      gainSeasonStat('judgment', 2, `case-verdict:${caseId}`)
+      if (verdict === answerKey) gainSeasonStat('judgment', 1, `case-correct:${caseId}`)
+      persist()
+      return true
     },
 
     // ---- 입력 원칙: 선택 우선, 타이핑은 선택 ----

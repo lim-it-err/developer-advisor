@@ -147,6 +147,46 @@ test('머지 or 반려: 375px에서 5장 판정 후 세션 요약을 본다', as
   expect(errors).toEqual([])
 })
 
+test('사건 파일: Day 1부터 몰아보고 근본 원인을 한 번 지목한다', async ({ page }) => {
+  const errors: string[] = []
+  page.on('console', (message) => {
+    if (message.type() === 'error') errors.push(message.text())
+  })
+  page.on('pageerror', (error) => errors.push(error.message))
+  await page.setViewportSize({ width: 375, height: 812 })
+
+  await page.getByRole('link', { name: '미니게임', exact: true }).click()
+  await page.getByRole('link', { name: /사라지는 적립금/ }).click()
+
+  await expect(page).toHaveURL(/\/games\/case\/case-vanishing-points-01$/)
+  await expect(page.getByRole('heading', { name: '사라지는 적립금' })).toBeVisible()
+  await expect(page.getByText('Day 1 · 민원과 그래프')).toBeVisible()
+  await expect(page.getByText('민원 41건 표본 정리:')).toBeVisible()
+  await expect(page.getByRole('heading', { name: '이 사건의 근본 원인은 무엇입니까?' })).not.toBeVisible()
+
+  await page.getByRole('button', { name: '몰아보기' }).click()
+  await expect(page.getByText('Day 5 · 코드')).toBeVisible()
+  await expect(page.getByText('민원 41건 표본 정리:')).not.toBeVisible()
+  await page.getByText('Day 1 · 민원과 그래프').click()
+  await expect(page.getByText('민원 41건 표본 정리:')).toBeVisible()
+  await page.getByRole('button', {
+    name: '증설 서버의 크론이 시간대 차이로 이중 실행됐고, 만료 차감에 멱등성이 없었다',
+  }).click()
+
+  await expect(page.getByText('적중', { exact: true })).toBeVisible()
+  await expect(page.getByText(/방아쇠는 D-14의 증설입니다/)).toBeVisible()
+  await expect(page.getByText(/수정은 세 줄이었습니다/)).toBeVisible()
+  const persisted = await page.evaluate(() => JSON.parse(localStorage.getItem('advisor.learner.v1') ?? '{}'))
+  expect(persisted.caseProgress['case-vanishing-points-01']).toMatchObject({
+    openedDays: 5,
+    verdict: 'cron-idempotency',
+  })
+  expect(persisted.seasonStats.gains.filter((gain: { source: string }) => gain.source.startsWith('case-')))
+    .toHaveLength(2)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+  expect(errors).toEqual([])
+})
+
 test('시즌: 루틴 수동 체크가 교양 +1과 최근 적립 로그에 반영된다', async ({ page }) => {
   await page.clock.setFixedTime(new Date('2026-08-03T08:00:00'))
   await page.evaluate(() => {

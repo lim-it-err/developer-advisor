@@ -4,9 +4,11 @@ import { useRoute } from 'vue-router'
 import { useMissions } from '../store/missions.js'
 import InsightCard from '../components/InsightCard.vue'
 import cards from '../data/sampleCards.js'
+import caseFileData from '../data/sampleCaseFiles.js'
 
 const store = useMissions()
 const route = useRoute()
+const caseFiles = caseFileData.caseFiles
 
 const deck = ref('reading')
 const linkedCardId = computed(() => (typeof route.query.card === 'string' ? route.query.card : ''))
@@ -33,7 +35,6 @@ const snackMissions = computed(() =>
 )
 
 const upcoming = [
-  { emoji: '🕵️', name: '사건 파일', desc: '장애 포스트모템 추리 연속극 — 준비 중' },
   { emoji: '📈', name: '시즌제 스탯', desc: '4주 시즌, 안목·언어화·판단·교양 — 준비 중' },
 ]
 </script>
@@ -76,14 +77,29 @@ const upcoming = [
 
     <section class="block">
       <h2 class="sec">🎮 바로 플레이</h2>
-      <router-link to="/routine/swipe" class="snack game-live card">
-        <span class="snack-emoji">🃏</span>
-        <span class="snack-body">
-          <span class="snack-title">머지 or 반려</span>
-          <span class="snack-type">코드 판정 1탭 + 근거 토큰 1탭 · 샘플 카드 5장</span>
-        </span>
-        <span class="play-arrow">플레이 →</span>
-      </router-link>
+      <div class="play-list">
+        <router-link to="/routine/swipe" class="snack game-live card">
+          <span class="snack-emoji">🃏</span>
+          <span class="snack-body">
+            <span class="snack-title">머지 or 반려</span>
+            <span class="snack-type">코드 판정 1탭 + 근거 토큰 1탭 · 샘플 카드 5장</span>
+          </span>
+          <span class="play-arrow">플레이 →</span>
+        </router-link>
+        <router-link
+          v-for="caseFile in caseFiles"
+          :key="caseFile.id"
+          :to="`/games/case/${caseFile.id}`"
+          class="snack game-live card"
+        >
+          <span class="snack-emoji">{{ caseFile.emoji }}</span>
+          <span class="snack-body">
+            <span class="snack-title">{{ caseFile.title }}</span>
+            <span class="snack-type">{{ caseFile.tagline }}</span>
+          </span>
+          <span class="play-arrow">수사 →</span>
+        </router-link>
+      </div>
     </section>
 
     <section class="block">
@@ -123,7 +139,7 @@ const upcoming = [
 }
 .deck-tab.active { border-color: var(--accent); color: var(--accent); background: rgba(122, 162, 247, 0.12); }
 
-.card-list, .snack-list, .upcoming-list { display: flex; flex-direction: column; gap: 10px; }
+.card-list, .snack-list, .play-list, .upcoming-list { display: flex; flex-direction: column; gap: 10px; }
 
 .snack, .upcoming {
   display: flex;
