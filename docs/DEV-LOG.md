@@ -18,3 +18,4 @@
 - 2026-08-03 claude dev-008(프론트 동기화) 병합 — 백엔드 M2 완결 (merge)
 - 2026-08-03 claude dev-009(store 보수) 병합 — dev-queue 완주 (merge)
 - 2026-08-03 claude docker-compose+service README, 사건 파일 1편, dev-010·011 큐잉 (main)
+- 2026-08-03 claude dev-011(claude 계약 테스트) 병합 — 키 넣기 전 구간 전체 보증 (merge)
