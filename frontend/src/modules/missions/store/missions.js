@@ -19,6 +19,33 @@ const API_BASE = import.meta.env.VITE_ADVISOR_API ?? 'http://localhost:8080/api/
 const CHAT_TIMEOUT_MS = 30_000
 // 실제 리뷰는 코드를 읽고 루브릭 기준으로 채점하므로 30~90초가 걸린다.
 const REVIEW_TIMEOUT_MS = 120_000
+const RECORD_TIMEOUT_MS = 5_000
+
+function learnerPath(nickname, suffix = '') {
+  return `/learners/${encodeURIComponent(nickname)}${suffix}`
+}
+
+async function requestRecord(path, { method = 'GET', body } = {}) {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), RECORD_TIMEOUT_MS)
+  try {
+    const res = await fetch(`${API_BASE}${path}`, {
+      method,
+      headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
+      body: body === undefined ? undefined : JSON.stringify(body),
+      signal: controller.signal,
+    })
+    if (!res.ok) throw new Error(`learner record HTTP ${res.status}`)
+    return await res.json()
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+function fireAndForget(promise) {
+  promise.catch(() => {})
+  return promise
+}
 
 // POST /chat/preview — 실패(네트워크/타임아웃/비정상 응답)는 전부 throw, 호출부에서 폴백.
 async function requestChatPreview(context, history, text) {
@@ -471,6 +498,7 @@ function load() {
 }
 
 const persisted = load()
+let journalUpdatedAt = persisted._sync?.journalUpdatedAt ?? null
 
 const state = reactive({
   missions: sample.missions,
@@ -502,7 +530,23 @@ const state = reactive({
   seasonStats: normalizeSeasonStats(persisted.seasonStats),
 })
 
-function persist() {
+const JOURNAL_KEYS = [
+  'chats',
+  'meetingChats',
+  'projectSubmissions',
+  'routineHistory',
+  'routineChecks',
+  'findingsDrafts',
+  'endingPredictions',
+  'seasonStats',
+]
+
+let syncBarrierNickname = ''
+let syncBarrier = Promise.resolve(false)
+const writeChains = new Map()
+
+function persist({ syncJournal = true } = {}) {
+  if (syncJournal) journalUpdatedAt = new Date().toISOString()
   localStorage.setItem(
     STORAGE_KEY,
     JSON.stringify({
@@ -519,8 +563,286 @@ function persist() {
       findingsDrafts: state.findingsDrafts,
       endingPredictions: state.endingPredictions,
       seasonStats: state.seasonStats,
+      _sync: { journalUpdatedAt },
     }),
   )
+  if (syncJournal) queueJournalWrite()
+}
+
+function afterInitialSync(nickname, operation) {
+  const barrier = syncBarrierNickname === nickname ? syncBarrier : Promise.resolve(false)
+  return barrier.catch(() => false).then(() => {
+    if (!nickname || state.learner.nickname !== nickname) return null
+    return operation()
+  })
+}
+
+function queueWrite(key, operation) {
+  const previous = writeChains.get(key) ?? Promise.resolve()
+  const next = previous.catch(() => {}).then(operation)
+  writeChains.set(key, next)
+  next.finally(() => {
+    if (writeChains.get(key) === next) writeChains.delete(key)
+  }).catch(() => {})
+  return fireAndForget(next)
+}
+
+function journalSnapshot() {
+  return Object.fromEntries(JOURNAL_KEYS.map((key) => [key, state[key]]))
+}
+
+function queueJournalWrite() {
+  const nickname = state.learner.nickname
+  if (!nickname) return
+  const payload = { updatedAt: journalUpdatedAt, data: journalSnapshot() }
+  queueWrite(`journal:${nickname}`, () => afterInitialSync(
+    nickname,
+    () => requestRecord(learnerPath(nickname, '/journal'), { method: 'PUT', body: payload }),
+  ))
+}
+
+function missionRecordPath(nickname, missionId, suffix) {
+  return learnerPath(
+    nickname,
+    `/missions/${encodeURIComponent(missionId)}${suffix}`,
+  )
+}
+
+function queueRecordWrite(nickname, missionId, kind, value) {
+  if (!nickname) return Promise.resolve(null)
+  const path = missionRecordPath(nickname, missionId, `/records/${encodeURIComponent(kind)}`)
+  return queueWrite(`record:${nickname}:${missionId}:${kind}`, () => afterInitialSync(
+    nickname,
+    () => requestRecord(path, { method: 'PUT', body: value }),
+  ))
+}
+
+async function postSubmissionNow(nickname, missionId, entry) {
+  if (entry.serverId) return entry.serverId
+  const saved = await requestRecord(
+    missionRecordPath(nickname, missionId, '/submissions'),
+    { method: 'POST', body: { files: entry.files, explanation: null } },
+  )
+  entry.serverId = saved.id
+  persist({ syncJournal: false })
+  return saved.id
+}
+
+function queueSubmissionWrite(nickname, missionId, entry) {
+  if (!nickname) return Promise.resolve(null)
+  return afterInitialSync(nickname, () => {
+    if (entry.serverId) return entry.serverId
+    return postSubmissionNow(nickname, missionId, entry)
+  }).catch(() => null)
+}
+
+async function postReviewNow(nickname, missionId, submissionId, entry) {
+  if (!submissionId || entry.serverId) return entry.serverId ?? null
+  const saved = await requestRecord(
+    missionRecordPath(nickname, missionId, '/reviews'),
+    { method: 'POST', body: { submissionId, content: entry.content } },
+  )
+  entry.serverId = saved.id
+  entry.submissionId = saved.submissionId
+  persist({ syncJournal: false })
+  return saved.id
+}
+
+function queueReviewWrite(nickname, missionId, submissionPromise, entry) {
+  if (!nickname) return
+  fireAndForget(Promise.resolve(submissionPromise)
+    .then((submissionId) => afterInitialSync(
+      nickname,
+      () => postReviewNow(nickname, missionId, submissionId, entry),
+    )))
+}
+
+function objectHasValues(value) {
+  return value && typeof value === 'object' && Object.keys(value).length > 0
+}
+
+function hasLocalRecords() {
+  const versioned = [state.submissions, state.reviews]
+    .some((records) => Object.values(records).some((versions) => versions?.length))
+  if (versioned || objectHasValues(state.explanations) || objectHasValues(state.plannerSubmissions)) return true
+  return JOURNAL_KEYS.some((key) => {
+    if (key === 'seasonStats') return (state.seasonStats?.gains?.length ?? 0) > 0
+    return objectHasValues(state[key])
+  })
+}
+
+function mergeVersions(local, remote, timeKey) {
+  const merged = []
+  const byServerId = new Map()
+  const byTime = new Map()
+  for (const entry of [...(local ?? []), ...(remote ?? [])]) {
+    const serverId = entry?.serverId
+    const time = entry?.[timeKey]
+    const existingIndex = (serverId && byServerId.get(serverId)) ?? (time && byTime.get(time))
+    if (existingIndex != null) {
+      merged[existingIndex] = { ...merged[existingIndex], ...entry }
+      continue
+    }
+    const index = merged.push(entry) - 1
+    if (serverId) byServerId.set(serverId, index)
+    if (time) byTime.set(time, index)
+  }
+  return merged.sort((a, b) => new Date(a?.[timeKey] ?? 0) - new Date(b?.[timeKey] ?? 0))
+}
+
+function latestBy(valueA, valueB, timeKey = 'submittedAt') {
+  if (!objectHasValues(valueA)) return valueB
+  if (!objectHasValues(valueB)) return valueA
+  return new Date(valueB[timeKey] ?? 0) > new Date(valueA[timeKey] ?? 0) ? valueB : valueA
+}
+
+function remoteJournalParts(remote) {
+  if (!objectHasValues(remote)) return { updatedAt: null, data: {} }
+  if (objectHasValues(remote.data)) return { updatedAt: remote.updatedAt ?? null, data: remote.data }
+  return { updatedAt: remote.updatedAt ?? null, data: remote }
+}
+
+function applyRemoteJournal(remote) {
+  const { updatedAt, data } = remoteJournalParts(remote)
+  const localTime = new Date(journalUpdatedAt ?? 0).getTime()
+  const remoteTime = new Date(updatedAt ?? 0).getTime()
+  const localHasJournal = JOURNAL_KEYS.some((key) => key === 'seasonStats'
+    ? (state.seasonStats?.gains?.length ?? 0) > 0
+    : objectHasValues(state[key]))
+  if (remoteTime < localTime || (remoteTime === localTime && localHasJournal)) return
+  for (const key of JOURNAL_KEYS) {
+    if (!(key in data)) continue
+    state[key] = key === 'seasonStats' ? normalizeSeasonStats(data[key]) : data[key]
+  }
+  journalUpdatedAt = updatedAt ?? journalUpdatedAt
+}
+
+function mapRemoteSubmission(nickname, entry) {
+  return {
+    files: entry.files ?? [],
+    submittedAt: entry.submittedAt,
+    by: nickname,
+    serverId: entry.id,
+  }
+}
+
+function mapRemoteReview(entry) {
+  return {
+    content: entry.content,
+    overall: entry.overall,
+    reviewedAt: entry.reviewedAt,
+    serverId: entry.id,
+    submissionId: entry.submissionId,
+  }
+}
+
+async function readRemoteRecords(nickname) {
+  const journal = await requestRecord(learnerPath(nickname, '/journal'))
+  const missions = await Promise.all(state.missions.map(async (mission) => {
+    const base = missionRecordPath(nickname, mission.id, '')
+    const [submissions, reviews, explanation, planner] = await Promise.all([
+      requestRecord(`${base}/submissions`),
+      requestRecord(`${base}/reviews`),
+      requestRecord(`${base}/records/explanation`),
+      requestRecord(`${base}/records/planner`),
+    ])
+    return { missionId: mission.id, submissions, reviews, explanation, planner }
+  }))
+  return { journal, missions }
+}
+
+function remoteHasRecords(remote) {
+  if (objectHasValues(remote.journal)) return true
+  return remote.missions.some((mission) =>
+    mission.submissions.length || mission.reviews.length ||
+    objectHasValues(mission.explanation) || objectHasValues(mission.planner))
+}
+
+async function uploadLocalRecords(nickname) {
+  if (!journalUpdatedAt) journalUpdatedAt = new Date().toISOString()
+  for (const mission of state.missions) {
+    const missionId = mission.id
+    const submissions = state.submissions[missionId] ?? []
+    for (const entry of submissions) await postSubmissionNow(nickname, missionId, entry)
+    const reviews = state.reviews[missionId] ?? []
+    for (const review of reviews) {
+      const reviewTime = new Date(review.reviewedAt ?? 0).getTime()
+      const submission = [...submissions]
+        .reverse()
+        .find((entry) => new Date(entry.submittedAt ?? 0).getTime() <= reviewTime)
+        ?? submissions[submissions.length - 1]
+      await postReviewNow(nickname, missionId, submission?.serverId, review)
+    }
+    if (objectHasValues(state.explanations[missionId])) {
+      await requestRecord(missionRecordPath(nickname, missionId, '/records/explanation'), {
+        method: 'PUT', body: state.explanations[missionId],
+      })
+    }
+    if (objectHasValues(state.plannerSubmissions[missionId])) {
+      await requestRecord(missionRecordPath(nickname, missionId, '/records/planner'), {
+        method: 'PUT', body: state.plannerSubmissions[missionId],
+      })
+    }
+  }
+  await requestRecord(learnerPath(nickname, '/journal'), {
+    method: 'PUT', body: { updatedAt: journalUpdatedAt, data: journalSnapshot() },
+  })
+  persist({ syncJournal: false })
+}
+
+function mergeRemoteRecords(nickname, remote) {
+  applyRemoteJournal(remote.journal)
+  for (const mission of remote.missions) {
+    const missionId = mission.missionId
+    const submissions = mergeVersions(
+      state.submissions[missionId],
+      mission.submissions.map((entry) => mapRemoteSubmission(nickname, entry)),
+      'submittedAt',
+    )
+    if (submissions.length) state.submissions[missionId] = submissions
+    else delete state.submissions[missionId]
+
+    const reviews = mergeVersions(
+      state.reviews[missionId],
+      mission.reviews.map(mapRemoteReview),
+      'reviewedAt',
+    )
+    if (reviews.length) state.reviews[missionId] = reviews
+    else delete state.reviews[missionId]
+    if (objectHasValues(mission.explanation)) {
+      state.explanations[missionId] = latestBy(state.explanations[missionId], mission.explanation)
+    }
+    if (objectHasValues(mission.planner)) {
+      const local = state.plannerSubmissions[missionId] ?? {}
+      state.plannerSubmissions[missionId] = {
+        meeting: latestBy(local.meeting, mission.planner.meeting),
+        review: latestBy(local.review, mission.planner.review),
+      }
+    }
+  }
+  persist({ syncJournal: false })
+}
+
+async function synchronizeRecords(nickname = state.learner.nickname) {
+  if (!nickname || state.learner.nickname !== nickname) return false
+  try {
+    const remote = await readRemoteRecords(nickname)
+    if (state.learner.nickname !== nickname) return false
+    if (!remoteHasRecords(remote)) {
+      if (hasLocalRecords()) await uploadLocalRecords(nickname)
+    } else {
+      mergeRemoteRecords(nickname, remote)
+    }
+    return true
+  } catch {
+    return false
+  }
+}
+
+function startRecordSync(nickname = state.learner.nickname) {
+  syncBarrierNickname = nickname
+  syncBarrier = synchronizeRecords(nickname)
+  return syncBarrier
 }
 
 function gainSeasonStat(stat, amount, source) {
@@ -671,8 +993,16 @@ export function useMissions() {
     },
 
     setNickname(name) {
-      state.learner.nickname = String(name ?? '').trim().slice(0, 12)
-      persist()
+      const nickname = String(name ?? '').trim().slice(0, 12)
+      state.learner.nickname = nickname
+      persist({ syncJournal: false })
+      return startRecordSync(nickname)
+    },
+
+    // 앱 시작/닉네임 변경 때 자동 실행되며, 테스트와 수동 복구에서도 같은 진입점을 쓴다.
+    syncRecords() {
+      const nickname = state.learner.nickname
+      return syncBarrierNickname === nickname ? syncBarrier : startRecordSync(nickname)
     },
 
     // 코드 제출 + 실제 Reviewer 백엔드 호출. 제출 자체는 항상 저장되고(재제출은 새 버전으로 append),
@@ -688,6 +1018,9 @@ export function useMissions() {
       versions.push(entry)
       gainSeasonStat('vision', 3, `mission-submit:${missionId}`)
       persist()
+
+      const nickname = state.learner.nickname
+      const submissionSync = queueSubmissionWrite(nickname, missionId, entry)
 
       if (!mission) return false
 
@@ -716,8 +1049,10 @@ export function useMissions() {
         const overall = clampScore((content.items ?? []).reduce((sum, it) => sum + (Number(it.score) || 0), 0))
 
         const reviews = (state.reviews[missionId] ??= [])
-        reviews.push({ content, overall, reviewedAt: new Date().toISOString() })
+        const reviewEntry = { content, overall, reviewedAt: new Date().toISOString() }
+        reviews.push(reviewEntry)
         persist()
+        queueReviewWrite(nickname, missionId, submissionSync, reviewEntry)
         return true
       } catch {
         return false // 백엔드 불가/실패 — 저장된 리뷰 없음. UI는 이를 정직하게 드러낸다.
@@ -732,6 +1067,12 @@ export function useMissions() {
       }
       gainSeasonStat('voice', 3, `explanation:${missionId}`)
       persist()
+      queueRecordWrite(
+        state.learner.nickname,
+        missionId,
+        'explanation',
+        state.explanations[missionId],
+      )
     },
 
     // 저장된 실제 리뷰 버전 전체(최신순 아님 — 제출 순). 재제출 이력 셀렉터용.
@@ -839,6 +1180,7 @@ export function useMissions() {
       }
       if (kind === 'meeting') gainSeasonStat('judgment', 3, `planner-agreement:${missionId}`)
       persist()
+      queueRecordWrite(state.learner.nickname, missionId, 'planner', entry)
     },
 
     // 성장 기록 페이지용: 제출/설명 이력을 최신순으로 합쳐서 돌려준다.
@@ -929,3 +1271,6 @@ function mockChatReply(missionId, text) {
   }
   return '[프로토타입 모의 응답] 질문이 기록되었습니다. 실서비스에서는 미션 컨텍스트를 아는 에이전트(Haiku)가 답하고, 이 대화는 리뷰 때 평판 평가에 반영됩니다. 요구사항 중 일부러 모호하게 둔 항목이 있으니, 그걸 짚는 질문이면 가장 좋습니다.'
 }
+
+// 저장된 닉네임이 있는 재방문은 화면을 막지 않고 서버 기록 병합을 백그라운드에서 시작한다.
+if (state.learner.nickname) fireAndForget(startRecordSync())

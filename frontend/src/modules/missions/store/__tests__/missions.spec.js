@@ -20,6 +20,14 @@ async function loadStore(persisted = {}) {
   return useMissions()
 }
 
+function jsonResponse(value, status = 200) {
+  return Promise.resolve({
+    ok: status >= 200 && status < 300,
+    status,
+    json: () => Promise.resolve(value),
+  })
+}
+
 describe('missions store 특성화', () => {
   beforeEach(() => {
     vi.useFakeTimers()
@@ -221,5 +229,84 @@ describe('missions store 특성화', () => {
       judgment: 5,
       culture: 0,
     })
+  })
+
+  it('닉네임 재방문 시 서버 제출 합집합과 최신 설명·journal을 로컬에 병합한다', async () => {
+    const missionId = 's1-wine-01'
+    const localSubmission = {
+      files: [{ path: 'Local.java', content: 'class Local {}' }],
+      submittedAt: '2026-08-01T00:00:00.000Z',
+      by: 'sync-user',
+    }
+    vi.stubGlobal('fetch', vi.fn((url) => {
+      const path = String(url)
+      if (path.endsWith('/journal')) {
+        return jsonResponse({
+          updatedAt: '2026-08-03T00:00:00.000Z',
+          data: { routineHistory: { '2026-08-02': 2 } },
+        })
+      }
+      if (path.endsWith(`/missions/${missionId}/submissions`)) {
+        return jsonResponse([{
+          id: 'sub_remote',
+          missionId,
+          files: [{ path: 'Remote.java', content: 'class Remote {}' }],
+          explanation: null,
+          submittedAt: '2026-08-02T00:00:00.000Z',
+        }])
+      }
+      if (path.endsWith(`/missions/${missionId}/records/explanation`)) {
+        return jsonResponse({ text: '서버 설명', submittedAt: '2026-08-02T01:00:00.000Z' })
+      }
+      if (path.endsWith('/submissions') || path.endsWith('/reviews')) return jsonResponse([])
+      return jsonResponse({})
+    }))
+
+    const store = await loadStore({
+      learner: { nickname: 'sync-user' },
+      submissions: { [missionId]: [localSubmission] },
+      explanations: { [missionId]: { text: '로컬 설명', submittedAt: '2026-08-01T01:00:00.000Z' } },
+    })
+    expect(await store.syncRecords()).toBe(true)
+
+    expect(store.state.submissions[missionId].map((entry) => entry.files[0].path)).toEqual([
+      'Local.java',
+      'Remote.java',
+    ])
+    expect(store.state.submissions[missionId][1].serverId).toBe('sub_remote')
+    expect(Object.keys(store.state.submissions)).toEqual([missionId])
+    expect(store.state.explanations[missionId].text).toBe('서버 설명')
+    expect(store.state.routineHistory).toEqual({ '2026-08-02': 2 })
+  })
+
+  it('서버가 비어 있는 최초 동기화에서는 기존 로컬 제출을 한 번 밀어올린다', async () => {
+    const postBodies = []
+    vi.stubGlobal('fetch', vi.fn((url, options = {}) => {
+      if (options.method === 'POST' && String(url).endsWith('/submissions')) {
+        postBodies.push(JSON.parse(options.body))
+        return jsonResponse({ id: 'sub_uploaded' }, 201)
+      }
+      if (options.method === 'PUT') return jsonResponse(JSON.parse(options.body))
+      if (String(url).endsWith('/submissions') || String(url).endsWith('/reviews')) return jsonResponse([])
+      return jsonResponse({})
+    }))
+
+    const store = await loadStore({
+      learner: { nickname: 'migration-user' },
+      submissions: {
+        's1-wine-01': [{
+          files: [{ path: 'Legacy.java', content: 'class Legacy {}' }],
+          submittedAt: '2026-08-01T00:00:00.000Z',
+          by: 'migration-user',
+        }],
+      },
+    })
+    expect(await store.syncRecords()).toBe(true)
+
+    expect(postBodies).toEqual([{
+      files: [{ path: 'Legacy.java', content: 'class Legacy {}' }],
+      explanation: null,
+    }])
+    expect(store.state.submissions['s1-wine-01'][0].serverId).toBe('sub_uploaded')
   })
 })
