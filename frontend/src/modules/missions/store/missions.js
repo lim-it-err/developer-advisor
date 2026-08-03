@@ -198,6 +198,12 @@ function nextProjectSubMission(state, seed) {
   return candidates.length ? candidates[seed % candidates.length] : null
 }
 
+function projectSubMissionUnlocked(state, project, index) {
+  if (!project?.subMissions?.length || index < 0 || index >= project.subMissions.length) return false
+  if (index === 0) return true
+  return !!state.projectSubmissions[project.subMissions[index - 1].id]
+}
+
 // 슬롯 하나의 표준 모양을 만든다. mission이 주어지면 title/링크를 미션 기준으로 채우고,
 // title/linkTo를 직접 넘기면(자유 슬롯 등 특정 미션에 안 묶이는 경우) 그걸 우선한다.
 function makeRoutineSlot(state, {
@@ -469,6 +475,12 @@ function migrateSubmissions(raw) {
   return result
 }
 
+function hasLegacySubmission(raw) {
+  return Object.values(raw ?? {}).some(
+    (value) => value && typeof value === 'object' && !Array.isArray(value),
+  )
+}
+
 export const PARTS = [
   { no: 1, title: '분리와 계약', tagline: '코드 안의 전쟁 — 책임을 나누고, 계약을 긋고, 레거시를 길들인다' },
   { no: 2, title: '구조와 세계', tagline: '시스템과 사람 — 경계는 코드가 아니라 세계에 긋는 것이다' },
@@ -498,6 +510,7 @@ function load() {
 }
 
 const persisted = load()
+const submissionMigrationNeeded = hasLegacySubmission(persisted.submissions)
 let journalUpdatedAt = persisted._sync?.journalUpdatedAt ?? null
 
 const state = reactive({
@@ -568,6 +581,10 @@ function persist({ syncJournal = true } = {}) {
   )
   if (syncJournal) queueJournalWrite()
 }
+
+// 단일 객체였던 구버전 제출은 메모리에서만 감싸 두지 않고, 로드 직후 배열 형태로 한 번 확정한다.
+// 서버 동기화는 앱 시작 루틴이 담당하므로 이 마이그레이션 쓰기에서는 journal 전송을 만들지 않는다.
+if (submissionMigrationNeeded) persist({ syncJournal: false })
 
 function afterInitialSync(nickname, operation) {
   const barrier = syncBarrierNickname === nickname ? syncBarrier : Promise.resolve(false)
@@ -960,10 +977,7 @@ export function useMissions() {
 
     // 소미션 i는 i===0 이거나 직전 소미션이 제출되어 있으면 해금.
     isSubMissionUnlocked(project, index) {
-      if (!project?.subMissions?.length) return false
-      if (index === 0) return true
-      const prev = project.subMissions[index - 1]
-      return !!state.projectSubmissions[prev.id]
+      return projectSubMissionUnlocked(state, project, index)
     },
 
     // { done, total, currentIndex } — currentIndex는 "지금 해야 할" 소미션 인덱스.
@@ -973,17 +987,24 @@ export function useMissions() {
       const subMissions = project?.subMissions ?? []
       const total = subMissions.length
       const done = subMissions.filter((sm) => !!state.projectSubmissions[sm.id]).length
-      const currentIndex = total === 0 ? -1 : done >= total ? total - 1 : done
+      const firstIncomplete = subMissions.findIndex((sm) => !state.projectSubmissions[sm.id])
+      const currentIndex = total === 0 ? -1 : firstIncomplete === -1 ? total - 1 : firstIncomplete
       return { done, total, currentIndex }
     },
 
     submitSubMission(subMissionId, files) {
+      const project = state.projects.find((candidate) =>
+        candidate.subMissions?.some((subMission) => subMission.id === subMissionId))
+      const index = project?.subMissions?.findIndex((subMission) => subMission.id === subMissionId) ?? -1
+      if (!projectSubMissionUnlocked(state, project, index)) return false
+
       state.projectSubmissions[subMissionId] = {
         files: files.filter((f) => f.path.trim() && f.content.trim()),
         submittedAt: new Date().toISOString(),
         by: state.learner.nickname || null,
       }
       persist()
+      return true
     },
 
     // 프로토타입: 소미션 리뷰는 사전 생성된 샘플.

@@ -125,13 +125,56 @@ describe('missions store 특성화', () => {
     expect(store.isSubMissionUnlocked(project, 1)).toBe(false)
     expect(store.projectProgress(project.id)).toEqual({ done: 0, total: 6, currentIndex: 0 })
 
-    store.submitSubMission(project.subMissions[0].id, [
+    expect(store.submitSubMission(project.subMissions[0].id, [
       { path: 'Bike.java', content: 'class Bike {}' },
-    ])
+    ])).toBe(true)
 
     expect(store.isSubMissionUnlocked(project, 1)).toBe(true)
     expect(store.isSubMissionUnlocked(project, 2)).toBe(false)
     expect(store.projectProgress(project.id)).toEqual({ done: 1, total: 6, currentIndex: 1 })
+  })
+
+  it('잠긴 프로젝트 소미션을 직접 제출해도 저장하지 않는다', async () => {
+    const store = await loadStore()
+    const project = store.state.projects[0]
+    const lockedId = project.subMissions[1].id
+    const savedBefore = localStorage.getItem(STORAGE_KEY)
+
+    const submitted = store.submitSubMission(lockedId, [
+      { path: 'Locked.java', content: 'class Locked {}' },
+    ])
+
+    expect(submitted).toBe(false)
+    expect(store.state.projectSubmissions[lockedId]).toBeUndefined()
+    expect(localStorage.getItem(STORAGE_KEY)).toBe(savedBefore)
+  })
+
+  it('비연속 프로젝트 저장 데이터에서도 첫 미완료 인덱스를 현재 위치로 삼는다', async () => {
+    const store = await loadStore()
+    const project = store.state.projects[0]
+    const [first, , third] = project.subMissions
+    store.state.projectSubmissions[first.id] = { files: [], submittedAt: '2026-08-01T00:00:00.000Z' }
+    store.state.projectSubmissions[third.id] = { files: [], submittedAt: '2026-08-02T00:00:00.000Z' }
+
+    expect(store.projectProgress(project.id)).toEqual({ done: 2, total: 6, currentIndex: 1 })
+  })
+
+  it('구버전 단일 제출 객체를 로드 직후 localStorage 배열로 확정한다', async () => {
+    const legacy = {
+      files: [{ path: 'Legacy.java', content: 'class Legacy {}' }],
+      submittedAt: '2026-08-01T01:00:00.000Z',
+      by: 'legacy',
+    }
+
+    const store = await loadStore({ submissions: { 's1-wine-01': legacy } })
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY))
+
+    expect(store.state.submissions['s1-wine-01']).toEqual([legacy])
+    expect(saved.submissions['s1-wine-01']).toEqual([legacy])
+    expect(localStorage.setItem).toHaveBeenCalledTimes(2)
+
+    await loadStore(saved)
+    expect(localStorage.setItem).toHaveBeenCalledTimes(3)
   })
 
   it('같은 날짜에는 같은 루틴 미션을 결정한다', async () => {
