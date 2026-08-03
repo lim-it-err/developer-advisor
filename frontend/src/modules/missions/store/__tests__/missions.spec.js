@@ -298,6 +298,25 @@ describe('missions store 특성화', () => {
     expect(saved.caseProgress[caseId]).toMatchObject({ openedDays: 5, verdict: 'cron-idempotency' })
   })
 
+  it('카드 갈래는 최초 선택만 저장하고 교양을 카드당 한 번 적립한다', async () => {
+    const store = await loadStore()
+    const cardId = 'read-ggs-01'
+
+    expect(store.chooseCardFork(cardId, 'blessing')).toBe(true)
+    expect(store.chooseCardFork(cardId, 'debt')).toBe(false)
+
+    expect(store.state.cardForkChoices[cardId]).toBe('blessing')
+    expect(store.seasonOverview().totals.culture).toBe(1)
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY))
+    expect(saved.cardForkChoices).toEqual({ [cardId]: 'blessing' })
+    expect(saved.seasonStats.gains).toContainEqual({
+      date: '2026-08-03',
+      stat: 'culture',
+      amount: 1,
+      source: `card-fork:${cardId}`,
+    })
+  })
+
   it('닉네임 재방문 시 서버 제출 합집합과 최신 설명·journal을 로컬에 병합한다', async () => {
     const missionId = 's1-wine-01'
     const localSubmission = {

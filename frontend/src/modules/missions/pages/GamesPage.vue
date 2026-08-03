@@ -57,7 +57,10 @@ const upcoming = [
           v-for="c in shownCards"
           :key="c.id"
           :card="c"
+          :fork="cards.cardForks[c.id]"
+          :saved-fork-choice="store.state.cardForkChoices[c.id]"
           :initial-open="c.id === linkedCardId"
+          @choose-fork="store.chooseCardFork(c.id, $event)"
         />
       </div>
     </section>

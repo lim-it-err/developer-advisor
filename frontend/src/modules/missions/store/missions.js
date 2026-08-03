@@ -541,6 +541,8 @@ const state = reactive({
   endingPredictions: persisted.endingPredictions ?? {},
   // 사건 파일 진행도. caseId -> { openedDays, lastOpenedDate, verdict? }
   caseProgress: persisted.caseProgress ?? {},
+  // 독서·시사회 카드 갈래 질문의 최초 선택. cardId -> choice key
+  cardForkChoices: persisted.cardForkChoices ?? {},
   // 4주 시즌 스탯. 구버전 저장 데이터에는 키가 없으므로 오늘을 시즌 시작일로 삼는다.
   seasonStats: normalizeSeasonStats(persisted.seasonStats),
 })
@@ -554,6 +556,7 @@ const JOURNAL_KEYS = [
   'findingsDrafts',
   'endingPredictions',
   'caseProgress',
+  'cardForkChoices',
   'seasonStats',
 ]
 
@@ -579,6 +582,7 @@ function persist({ syncJournal = true } = {}) {
       findingsDrafts: state.findingsDrafts,
       endingPredictions: state.endingPredictions,
       caseProgress: state.caseProgress,
+      cardForkChoices: state.cardForkChoices,
       seasonStats: state.seasonStats,
       _sync: { journalUpdatedAt },
     }),
@@ -942,6 +946,14 @@ export function useMissions() {
 
     seasonOverview() {
       return buildSeasonOverview(state.seasonStats, state.routineHistory, seasons.seasonEndings)
+    },
+
+    chooseCardFork(cardId, choiceKey) {
+      if (!cardId || !choiceKey || state.cardForkChoices[cardId]) return false
+      state.cardForkChoices[cardId] = choiceKey
+      gainSeasonStat('culture', 1, `card-fork:${cardId}`)
+      persist()
+      return true
     },
 
     // ---- 사건 파일(장애 포스트모템 추리 연속극) ----
