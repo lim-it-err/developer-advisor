@@ -1,0 +1,14 @@
+# Developer Advisor 백엔드.
+#   mock:   docker compose up --build
+#   claude: ANTHROPIC_API_KEY=sk-... ADVISOR_PROFILE=claude docker compose up --build
+# 기록(H2 파일)은 ./service/data/ 에 남아 컨테이너를 지워도 유지된다.
+services:
+  advisor:
+    build: ./service
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: ${ADVISOR_PROFILE:-mock}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+    volumes:
+      - ./service/data:/app/data
