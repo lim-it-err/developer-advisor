@@ -147,6 +147,43 @@ test('머지 or 반려: 375px에서 5장 판정 후 세션 요약을 본다', as
   expect(errors).toEqual([])
 })
 
+test('카드 갈래: 첫 선택을 저장하고 반대 입장도 본 뒤 새로고침하면 복원한다', async ({ page }) => {
+  const errors: string[] = []
+  page.on('console', (message) => {
+    if (message.type() === 'error') errors.push(message.text())
+  })
+  page.on('pageerror', (error) => errors.push(error.message))
+  await page.setViewportSize({ width: 375, height: 812 })
+
+  await page.getByRole('link', { name: '미니게임', exact: true }).click()
+  const card = page.locator('[data-card-id="read-ggs-01"]')
+  await card.getByRole('button', { name: /총, 균, 쇠/ }).click()
+  await expect(card.getByText('여러분 프로젝트에서 가장 오래된 초기 선택 — 지금 그것은 무엇에 가깝습니까?'))
+    .toBeVisible()
+
+  await card.getByRole('button', { name: '🌾 축복 — 그 덕에 여기까지 왔다' }).click()
+  await expect(card.getByText(/축복이라 느껴진다면/)).toBeVisible()
+  const otherChoice = card.getByRole('button', { name: '⛓ 부채 — 매일 이자를 내고 있다' })
+  await expect(otherChoice).toHaveClass(/muted/)
+  await otherChoice.click()
+  await expect(card.getByText(/부채라 부르는 순간/)).toBeVisible()
+
+  const persisted = await page.evaluate(() => JSON.parse(localStorage.getItem('advisor.learner.v1') ?? '{}'))
+  expect(persisted.cardForkChoices['read-ggs-01']).toBe('blessing')
+  expect(persisted.seasonStats.gains.filter(
+    (gain: { source: string }) => gain.source === 'card-fork:read-ggs-01',
+  )).toHaveLength(1)
+
+  await page.reload()
+  const reloadedCard = page.locator('[data-card-id="read-ggs-01"]')
+  await reloadedCard.getByRole('button', { name: /총, 균, 쇠/ }).click()
+  await expect(reloadedCard.getByText(/축복이라 느껴진다면/)).toBeVisible()
+  await expect(reloadedCard.getByRole('button', { name: '🌾 축복 — 그 덕에 여기까지 왔다' }))
+    .toHaveAttribute('aria-pressed', 'true')
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+  expect(errors).toEqual([])
+})
+
 test('사건 파일: Day 1부터 몰아보고 근본 원인을 한 번 지목한다', async ({ page }) => {
   const errors: string[] = []
   page.on('console', (message) => {
