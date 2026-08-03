@@ -14,3 +14,4 @@
 - 2026-08-03 claude 시즌 엔딩 판정표 7종 작성 (sampleSeasons.js, dev-006 재료)
 - 2026-08-03 claude dev-005(swipe) 병합 + 라벨 다듬기(오늘의 판정 5장) (merge)
 - 2026-08-03 claude dev-006(season-stats) 병합 — 시즌제 가동 (merge)
+- 2026-08-03 claude dev-007(백엔드 기록 영속화) 병합 — M2 절반 도달 (merge)
