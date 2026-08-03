@@ -6,6 +6,7 @@ import java.time.Instant;
 
 public record Review(
         String id,
+        String nickname,
         String submissionId,
         int overall,
         ReviewStatus status,

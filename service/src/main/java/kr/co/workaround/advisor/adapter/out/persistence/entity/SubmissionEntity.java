@@ -20,6 +20,10 @@ public class SubmissionEntity {
     @Id
     private String id;
 
+    // nullable for schema-update compatibility with records written before M2.
+    @Column(name = "nickname")
+    private String nickname;
+
     @Column(name = "mission_id", nullable = false)
     private String missionId;
 
@@ -33,8 +37,9 @@ public class SubmissionEntity {
     protected SubmissionEntity() {
     }
 
-    public SubmissionEntity(String id, String missionId, String explanation, Instant submittedAt) {
+    public SubmissionEntity(String id, String nickname, String missionId, String explanation, Instant submittedAt) {
         this.id = id;
+        this.nickname = nickname;
         this.missionId = missionId;
         this.explanation = explanation;
         this.submittedAt = submittedAt;
@@ -42,6 +47,10 @@ public class SubmissionEntity {
 
     public String getId() {
         return id;
+    }
+
+    public String getNickname() {
+        return nickname;
     }
 
     public String getMissionId() {

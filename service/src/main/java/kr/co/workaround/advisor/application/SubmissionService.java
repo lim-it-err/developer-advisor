@@ -26,14 +26,27 @@ public class SubmissionService {
 
     @Transactional
     public Submission create(String missionId, List<SubmittedFile> files, String explanation) {
+        return create("me", missionId, files, explanation);
+    }
+
+    @Transactional
+    public Submission create(String nickname, String missionId, List<SubmittedFile> files, String explanation) {
         String id = Ids.next("sub_");
-        Submission submission = new Submission(id, missionId, files, explanation, Clocks.now());
+        Submission submission = new Submission(id, nickname, missionId, files, explanation, Clocks.now());
         submissionRepository.save(PersistenceMapper.toEntity(submission));
         int ord = 0;
         for (SubmittedFile file : files) {
             submittedFileRepository.save(PersistenceMapper.toEntity(id, file, ord++));
         }
         return submission;
+    }
+
+    @Transactional(readOnly = true)
+    public List<Submission> list(String nickname, String missionId) {
+        return submissionRepository.findByNicknameAndMissionIdOrderBySubmittedAtAsc(nickname, missionId).stream()
+                .map(entity -> PersistenceMapper.toDomain(entity,
+                        submittedFileRepository.findBySubmissionIdOrderByOrdAsc(entity.getId())))
+                .toList();
     }
 
     @Transactional(readOnly = true)

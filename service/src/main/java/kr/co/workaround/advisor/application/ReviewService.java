@@ -102,7 +102,7 @@ public class ReviewService {
 
         int overall = reviewContent.items().stream().mapToInt(ReviewItem::score).sum();
 
-        Review review = new Review(Ids.next("rev_"), submission.id(), overall, ReviewStatus.READY,
+        Review review = new Review(Ids.next("rev_"), submission.nickname(), submission.id(), overall, ReviewStatus.READY,
                 reviewContent, Clocks.now());
         reviewRepository.save(PersistenceMapper.toEntity(review));
 
