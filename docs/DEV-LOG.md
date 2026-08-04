@@ -25,3 +25,4 @@
 - 2026-08-03 claude dev-012(카드 갈래 UI) 병합 — 카드에 선택 요소 라이브 (merge)
 - 2026-08-03 claude dev-013(배포 준비) 큐잉 + DEPLOY.md 절차서 (main)
 - 2026-08-04 claude dev-013(배포 준비) 병합 — 코드 측 배포 준비 완료 (merge)
+- 2026-08-04 claude 평일 노코드 재편: 신규 게임 후보 4종 + inbox/002 + dev-014 큐잉 (main)
