@@ -10,5 +10,7 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: ${ADVISOR_PROFILE:-mock}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      ADVISOR_AUTH_TOKEN: ${ADVISOR_AUTH_TOKEN:-}
+      ADVISOR_CORS_ALLOWED_ORIGINS: ${ADVISOR_CORS_ALLOWED_ORIGINS:-http://localhost:5173}
     volumes:
       - ./service/data:/app/data

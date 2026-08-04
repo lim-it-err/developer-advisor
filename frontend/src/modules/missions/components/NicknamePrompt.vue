@@ -10,10 +10,12 @@ const emit = defineEmits(['confirmed', 'cancelled'])
 
 const store = useMissions()
 const value = ref(props.initial)
+const advisorToken = ref(store.state.advisorToken)
 
 function confirm() {
   const name = value.value.trim()
   if (!name) return
+  store.setAdvisorToken(advisorToken.value)
   store.setNickname(name)
   emit('confirmed')
 }
@@ -37,6 +39,19 @@ function cancel() {
         autofocus
         @keydown.enter="confirm"
       />
+      <details class="advanced">
+        <summary>고급 — 엔진 토큰(선택)</summary>
+        <p class="advanced-desc">공개 엔진에 연결할 때만 입력합니다. 이 기기에만 저장됩니다.</p>
+        <input
+          v-model="advisorToken"
+          class="input token-input"
+          type="password"
+          autocomplete="off"
+          aria-label="엔진 토큰"
+          placeholder="X-Advisor-Token"
+          @keydown.enter="confirm"
+        />
+      </details>
       <button class="btn primary confirm-btn" :disabled="!value.trim()" @click="confirm">확인</button>
     </div>
   </div>
@@ -88,5 +103,9 @@ function cancel() {
   box-sizing: border-box;
 }
 .input:focus { outline: none; border-color: var(--accent); }
+.advanced { margin: -2px 0 14px; color: var(--fg-dim); font-size: 12px; }
+.advanced summary { cursor: pointer; user-select: none; }
+.advanced-desc { margin: 10px 0 8px; line-height: 1.5; }
+.token-input { margin-bottom: 0; }
 .confirm-btn { width: 100%; text-align: center; }
 </style>

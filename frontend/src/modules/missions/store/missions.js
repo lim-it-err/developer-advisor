@@ -21,6 +21,13 @@ const CHAT_TIMEOUT_MS = 30_000
 const REVIEW_TIMEOUT_MS = 120_000
 const RECORD_TIMEOUT_MS = 5_000
 
+function backendHeaders({ json = false } = {}) {
+  const headers = {}
+  if (json) headers['Content-Type'] = 'application/json'
+  if (state.advisorToken) headers['X-Advisor-Token'] = state.advisorToken
+  return Object.keys(headers).length ? headers : undefined
+}
+
 function learnerPath(nickname, suffix = '') {
   return `/learners/${encodeURIComponent(nickname)}${suffix}`
 }
@@ -31,7 +38,7 @@ async function requestRecord(path, { method = 'GET', body } = {}) {
   try {
     const res = await fetch(`${API_BASE}${path}`, {
       method,
-      headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
+      headers: backendHeaders({ json: body !== undefined }),
       body: body === undefined ? undefined : JSON.stringify(body),
       signal: controller.signal,
     })
@@ -54,7 +61,7 @@ async function requestChatPreview(context, history, text) {
   try {
     const res = await fetch(`${API_BASE}/chat/preview`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: backendHeaders({ json: true }),
       body: JSON.stringify({ context, history, text }),
       signal: controller.signal,
     })
@@ -77,7 +84,7 @@ async function requestReviewPreview(payload) {
   try {
     const res = await fetch(`${API_BASE}/review/preview`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: backendHeaders({ json: true }),
       body: JSON.stringify(payload),
       signal: controller.signal,
     })
@@ -524,6 +531,8 @@ const state = reactive({
   plannerSubmissions: persisted.plannerSubmissions ?? {},
   // 학습자: 기록 구분용 닉네임. 인증 아님 — 단순 식별자.
   learner: persisted.learner ?? { nickname: '' },
+  // 엔진 토큰은 기기별 localStorage 전용이며 journal 동기화 대상에 넣지 않는다.
+  advisorToken: persisted.advisorToken ?? '',
   // 프로젝트 모드(맨땅에서): 캠페인 데이터.
   projects: projectSample.projects ?? [],
   // 프로젝트 모드 제출물. subMissionId -> { files, submittedAt, by }
@@ -575,6 +584,7 @@ function persist({ syncJournal = true } = {}) {
       meetingChats: state.meetingChats,
       plannerSubmissions: state.plannerSubmissions,
       learner: state.learner,
+      advisorToken: state.advisorToken,
       projectSubmissions: state.projectSubmissions,
       reviews: state.reviews,
       routineHistory: state.routineHistory,
@@ -1084,6 +1094,11 @@ export function useMissions() {
       state.learner.nickname = nickname
       persist({ syncJournal: false })
       return startRecordSync(nickname)
+    },
+
+    setAdvisorToken(token) {
+      state.advisorToken = String(token ?? '').trim()
+      persist({ syncJournal: false })
     },
 
     // 앱 시작/닉네임 변경 때 자동 실행되며, 테스트와 수동 복구에서도 같은 진입점을 쓴다.

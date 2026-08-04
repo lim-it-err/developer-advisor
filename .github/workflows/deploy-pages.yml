@@ -29,8 +29,13 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - name: Build
         working-directory: frontend
+        env:
+          ADVISOR_API_BASE: ${{ vars.ADVISOR_API_BASE }}
         run: |
           npm ci
+          if [ -n "$ADVISOR_API_BASE" ]; then
+            export VITE_ADVISOR_API="$ADVISOR_API_BASE"
+          fi
           npx vite build --base=/${{ github.event.repository.name }}/
           cp dist/index.html dist/404.html
       - uses: actions/configure-pages@v5

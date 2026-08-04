@@ -1,21 +1,35 @@
 package kr.co.workaround.advisor.config;
 
-import org.springframework.beans.factory.annotation.Value;
+import kr.co.workaround.advisor.adapter.in.web.AdvisorAuthInterceptor;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @Configuration
+@EnableConfigurationProperties(AdvisorCorsProperties.class)
 public class WebCorsConfig implements WebMvcConfigurer {
 
-    @Value("${advisor.cors.allowed-origin:http://localhost:5173}")
-    private String allowedOrigin;
+    private final AdvisorCorsProperties corsProperties;
+    private final AdvisorAuthInterceptor advisorAuthInterceptor;
+
+    public WebCorsConfig(AdvisorCorsProperties corsProperties, AdvisorAuthInterceptor advisorAuthInterceptor) {
+        this.corsProperties = corsProperties;
+        this.advisorAuthInterceptor = advisorAuthInterceptor;
+    }
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/api/**")
-                .allowedOrigins(allowedOrigin)
+                .allowedOrigins(corsProperties.resolvedAllowedOrigins().toArray(String[]::new))
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                 .allowedHeaders("*");
+    }
+
+    @Override
+    public void addInterceptors(InterceptorRegistry registry) {
+        registry.addInterceptor(advisorAuthInterceptor)
+                .addPathPatterns("/api/advisor/**");
     }
 }

@@ -17,6 +17,8 @@ spring:
     password:
 
 advisor:
+  auth:
+    token: ${ADVISOR_AUTH_TOKEN:}
   cors:
     allowed-origin: http://localhost:5173
   llm:

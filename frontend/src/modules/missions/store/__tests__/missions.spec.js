@@ -239,6 +239,47 @@ describe('missions store 특성화', () => {
     expect(JSON.parse(localStorage.getItem(STORAGE_KEY)).learner.nickname).toBe('abcdefghijkl')
   })
 
+  it('엔진 토큰을 로컬 blob에만 저장하고 모든 기록 요청 헤더에 첨부한다', async () => {
+    const requests = []
+    vi.stubGlobal('fetch', vi.fn((url, options = {}) => {
+      requests.push({ url: String(url), options })
+      if (String(url).endsWith('/submissions') || String(url).endsWith('/reviews')) return jsonResponse([])
+      return jsonResponse({})
+    }))
+
+    const store = await loadStore({
+      learner: { nickname: 'token-user' },
+      advisorToken: 'engine-secret',
+    })
+    await store.syncRecords()
+
+    expect(requests.length).toBeGreaterThan(0)
+    expect(requests.every(({ options }) => options.headers?.['X-Advisor-Token'] === 'engine-secret')).toBe(true)
+
+    store.checkRoutineSlot(0)
+    for (let i = 0; i < 8; i += 1) await Promise.resolve()
+
+    const journalWrite = requests.find(({ url, options }) =>
+      url.endsWith('/journal') && options.method === 'PUT')
+    expect(journalWrite).toBeDefined()
+    expect(JSON.parse(journalWrite.options.body).data.advisorToken).toBeUndefined()
+    expect(JSON.parse(localStorage.getItem(STORAGE_KEY)).advisorToken).toBe('engine-secret')
+  })
+
+  it('리뷰 401을 기존 실패로 처리하고 토큰 헤더를 붙이되 가짜 리뷰를 만들지 않는다', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => jsonResponse({ error: 'UNAUTHORIZED' }, 401)))
+    const store = await loadStore({ advisorToken: 'engine-secret' })
+
+    const reviewed = await store.submitCode('s1-wine-01', [
+      { path: 'Wine.java', content: 'class Wine {}' },
+    ])
+
+    expect(reviewed).toBe(false)
+    expect(store.state.reviews['s1-wine-01']).toBeUndefined()
+    expect(fetch).toHaveBeenCalledOnce()
+    expect(fetch.mock.calls[0][1].headers['X-Advisor-Token']).toBe('engine-secret')
+  })
+
   it('기존 저장 blob을 보존하며 루틴 체크를 교양 스탯에 하루 한 번 적립한다', async () => {
     const store = await loadStore({ learner: { nickname: '기존 사용자' } })
 
