@@ -108,7 +108,7 @@ function onNicknameCancelled() {
       </div>
     </div>
 
-    <div class="card block meeting-room">
+    <div id="meeting-room" class="card block meeting-room">
       <h2 class="panel-title">회의실</h2>
 
       <button

@@ -9,6 +9,9 @@ import {
   nextSwipeCard,
   swipeSummary,
 } from '../games/swipeEngine.js'
+import { useMissions } from '../store/missions.js'
+
+const store = useMissions()
 
 const decisionOptions = [
   { value: 'merge', label: '✅ 머지' },
@@ -33,6 +36,7 @@ function chooseReason(token) {
 
 function next() {
   session.value = nextSwipeCard(session.value)
+  if (!currentSwipeCard(session.value)) store.completeSwipeSession()
 }
 
 function restart() {

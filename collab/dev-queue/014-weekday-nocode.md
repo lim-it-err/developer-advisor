@@ -12,6 +12,16 @@
 - **금 「회고의 금요일」**: 🚆 이번 주 리뷰 다시 읽기(현행) / 🍜 머지 or 반려 / 🌙 설명 훈련 — 라벨에 "(선택·주중 유일 타이핑)" 명시, done 판정은 현행
 - **주말**: 현행 유지 (시사회 카드 + 프로젝트 소미션 코딩)
 
+## 구현 체크리스트
+
+- [x] 요일별 기존 기능·상태와 완료 판정 헬퍼 정리
+- [x] 월~금 슬롯을 지정된 노코드 맵과 링크로 재배선
+- [x] 스와이프 당일 세션 완료 상태를 localStorage에 기록
+- [x] 평일 `submit` 부재·요일별 라벨·완료 판정 특성화 테스트
+- [x] 스와이프 E2E와 요일별 루틴 E2E 갱신
+- [x] Vitest·Playwright·Vite 빌드 검증
+- [x] 완료 보고서·커밋 작성 후 main 복귀
+
 ## 구현 노트
 - 슬롯 done 판정: 스와이프=당일 세션 완료 기록 필요 → localStorage에 `swipeSessions: { [date]: true }` 최소 추가(게임 종료 시 기록). 사건 파일=당일 openedDays 증가 or 열람 기록. 갈래=cardForkChoices에 오늘 선택 존재(당일 판정이 어려우면 manualCheck 병용 허용 — 단순함 우선).
 - 기존 checkRoutineSlot/routineChecks 재사용 우선. 과도한 신규 상태 금지.

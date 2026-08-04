@@ -4,6 +4,7 @@ import { reactive } from 'vue'
 import sample from '../data/sampleContent.js'
 import projectSample from '../data/sampleProjects.js'
 import cards from '../data/sampleCards.js'
+import caseFileData from '../data/sampleCaseFiles.js'
 import seasons from '../data/sampleSeasons.js'
 import {
   buildSeasonOverview,
@@ -137,22 +138,10 @@ function hasExplanationOn(state, missionId, dateStr) {
   return localDateStr(new Date(exp.submittedAt)) === dateStr
 }
 
-function hasAnySubmissionOn(state, dateStr) {
-  return Object.values(state.submissions).some(
-    (versions) => versions?.some((v) => v.submittedAt && localDateStr(new Date(v.submittedAt)) === dateStr),
-  )
-}
-
 function hasProjectSubmissionOn(state, subMissionId, dateStr) {
   const sub = state.projectSubmissions[subMissionId]
   if (!sub?.submittedAt) return false
   return localDateStr(new Date(sub.submittedAt)) === dateStr
-}
-
-function donePlannerReviewOn(state, missionId, dateStr) {
-  const rev = state.plannerSubmissions[missionId]?.review
-  if (!rev?.submittedAt) return false
-  return localDateStr(new Date(rev.submittedAt)) === dateStr
 }
 
 function submittedWithinDays(state, missionId, days) {
@@ -268,74 +257,132 @@ function noCodeReadLabel(mission) {
   return '브리핑 읽기' // 폴백: 코드 판독/설계 리뷰가 하나도 없어 아무 미션이나 뽑힌 경우
 }
 
+function pickForkCard(seed) {
+  const forkCards = cards.readingCards.filter((card) => cards.cardForks[card.id])
+  return pickBySeed(forkCards, seed)
+}
+
+function pickCaseFile(state, seed, dateStr) {
+  const viewedToday = caseFileData.caseFiles.find(
+    (caseFile) => state.caseProgress[caseFile.id]?.lastViewedDate === dateStr,
+  )
+  if (viewedToday) return viewedToday
+
+  const ongoing = caseFileData.caseFiles.filter((caseFile) => {
+    const progress = state.caseProgress[caseFile.id]
+    return progress && !progress.verdict && (progress.openedDays ?? 0) < caseFile.days.length
+  })
+  return pickBySeed(ongoing, seed) ?? caseFileData.caseFiles[0] ?? null
+}
+
+function caseClueTitle(state, caseFile, dateStr) {
+  if (!caseFile) return null
+  const progress = state.caseProgress[caseFile.id]
+  const opened = Math.min(caseFile.days.length, Math.max(0, Number(progress?.openedDays) || 0))
+  const canAdvance = progress?.lastOpenedDate && progress.lastOpenedDate < dateStr
+  const day = Math.min(caseFile.days.length, opened + (canAdvance || opened === 0 ? 1 : 0))
+  return `${caseFile.title} · Day ${Math.max(1, day)}`
+}
+
+function caseClueDone(state, caseFile, dateStr) {
+  if (!caseFile) return false
+  const progress = state.caseProgress[caseFile.id]
+  return progress?.lastOpenedDate === dateStr || progress?.lastViewedDate === dateStr
+}
+
+function pickEndingMission(state, seed, dateStr) {
+  const endingMissions = state.missions.filter(
+    (mission) => mission.endings?.some((ending) => ending.grade !== 'hidden'),
+  )
+  const pickedToday = endingMissions.find(
+    (mission) => state.endingPredictionDates[mission.id] === dateStr,
+  )
+  if (pickedToday) return pickedToday
+  return pickFromPools(
+    [endingMissions.filter((mission) => !state.endingPredictions[mission.id]), endingMissions],
+    seed,
+  )
+}
+
+function pickExplainStarterMission(state, seed, dateStr) {
+  const pickedToday = state.explainChipSelections[dateStr]?.missionId
+  if (pickedToday) {
+    const mission = state.missions.find((entry) => entry.id === pickedToday)
+    if (mission) return mission
+  }
+  return pickExplainMission(state, seed)
+}
+
+function pickMeetingMission(state, seed) {
+  const meetingMissions = state.missions.filter(
+    (mission) => mission.modes?.includes('plannerMeeting') && mission.plannerMeeting,
+  )
+  return pickBySeed(meetingMissions, seed)
+}
+
+function meetingQuestionCountOn(state, missionId, dateStr) {
+  if (!missionId) return 0
+  return (state.meetingChats[missionId] ?? []).filter(
+    (message) => message.role === 'me'
+      && message.at
+      && localDateStr(new Date(message.at)) === dateStr,
+  ).length
+}
+
 // ---- 요일별 루틴 템플릿 ----
 // 월~금은 3슬롯(출근길/점심/저녁), 주말은 2슬롯(오전/오후) — "3칸 강요 없음"의 주말 버전.
 
 function buildMonday(state, seed, dateStr) {
-  const mission = pickNoCodeMorningMission(state, '코드 판독', seed)
-  const lunchDone = mission ? hasSubmissionOn(state, mission.id, dateStr) : false
-  const readDone = lunchDone || !!state.routineChecks[dateStr]?.[0]
-  const explainMission = pickExplainMission(state, seed)
-  const explainDone = explainMission ? hasExplanationOn(state, explainMission.id, dateStr) : false
+  const caseFile = pickCaseFile(state, seed, dateStr)
+  const forkCard = pickForkCard(seed)
 
   return {
-    name: '판독의 월요일',
-    tagline: '읽는 근육을 먼저 씁니다 — 코드 판독으로 여는 한 주.',
+    name: '수사의 월요일',
+    tagline: '단서를 열고, 판정을 내리고, 마지막엔 한 갈래를 고릅니다.',
     slots: [
-      makeRoutineSlot(state, { kind: 'read', mission, emoji: '🚆', time: '출근길 · ~11시', label: noCodeReadLabel(mission), done: readDone, dateStr, manualCheckable: true, checkIndex: 0 }),
-      makeRoutineSlot(state, { kind: 'submit', mission, emoji: '🍜', time: '점심 · 11~17시', label: 'findings 제출', done: lunchDone, dateStr }),
-      makeRoutineSlot(state, { kind: 'explain', mission: explainMission, emoji: '🌙', time: '저녁 · 17시~', label: '설명 훈련', done: explainDone, dateStr }),
+      makeRoutineSlot(state, {
+        kind: 'caseClue',
+        title: caseClueTitle(state, caseFile, dateStr),
+        linkTo: caseFile ? `/games/case/${caseFile.id}` : '/games',
+        emoji: '🚆',
+        time: '출근길 · ~11시',
+        label: '사건 파일 오늘 단서',
+        done: caseClueDone(state, caseFile, dateStr),
+        dateStr,
+      }),
+      makeRoutineSlot(state, { kind: 'swipeReview', title: '오늘의 판정 5장', linkTo: '/routine/swipe', emoji: '🍜', time: '점심 · 11~17시', label: '머지 or 반려', done: !!state.swipeSessions[dateStr], dateStr }),
+      makeRoutineSlot(state, { kind: 'cardFork', title: forkCard?.bookTitle ?? null, linkTo: forkCard ? `/games?card=${forkCard.id}` : '/games', emoji: forkCard?.emoji ?? '📖', time: '저녁 · 17시~', label: '카드 갈래 1장', done: !!(forkCard && state.cardForkChoices[forkCard.id]), dateStr }),
     ],
   }
 }
 
 function buildTuesday(state, seed, dateStr) {
   const mission = pickNoCodeMorningMission(state, '설계 리뷰', seed)
-  const lunchDone = mission ? hasSubmissionOn(state, mission.id, dateStr) : false
-  const readDone = lunchDone || !!state.routineChecks[dateStr]?.[0]
-  const explainMission = pickExplainMission(state, seed)
-  const explainDone = explainMission ? hasExplanationOn(state, explainMission.id, dateStr) : false
+  const predictionMission = pickEndingMission(state, seed, dateStr)
 
   return {
-    name: '설계자의 화요일',
-    tagline: '코드 없이 비평만 합니다 — 설계 리뷰의 날.',
+    name: '판정의 화요일',
+    tagline: '읽고 예측하고 판정합니다 — 키보드 없이도 판단은 쌓입니다.',
     slots: [
-      makeRoutineSlot(state, { kind: 'read', mission, emoji: '🚆', time: '출근길 · ~11시', label: noCodeReadLabel(mission), done: readDone, dateStr, manualCheckable: true, checkIndex: 0 }),
-      makeRoutineSlot(state, { kind: 'submit', mission, emoji: '🍜', time: '점심 · 11~17시', label: 'critique 제출', done: lunchDone, dateStr }),
-      makeRoutineSlot(state, { kind: 'explain', mission: explainMission, emoji: '🌙', time: '저녁 · 17시~', label: '꼬리 질문에 답 적기', done: explainDone, dateStr }),
+      makeRoutineSlot(state, { kind: 'read', mission, emoji: '🚆', time: '출근길 · ~11시', label: noCodeReadLabel(mission), done: !!state.routineChecks[dateStr]?.[0], dateStr, manualCheckable: true, checkIndex: 0 }),
+      makeRoutineSlot(state, { kind: 'endingPrediction', mission: predictionMission, linkTo: predictionMission ? `/missions/${predictionMission.id}?tab=mission#ending-prediction` : '/missions', emoji: '🍜', time: '점심 · 11~17시', label: '결말 예측 1건', done: !!(predictionMission && state.endingPredictionDates[predictionMission.id] === dateStr), dateStr }),
+      makeRoutineSlot(state, { kind: 'swipeReview', title: '오늘의 판정 5장', linkTo: '/routine/swipe', emoji: '🌙', time: '저녁 · 17시~', label: '머지 or 반려', done: !!state.swipeSessions[dateStr], dateStr }),
     ],
   }
 }
 
 function buildWednesday(state, seed, dateStr) {
-  const card = pickBySeed(cards.readingCards, seed)
-  const cardDone = !!state.routineChecks[dateStr]?.[0]
-  const noExplainAny = missionsWithoutExplanation(state.missions, state)
-  const missionA = pickFromPools([noExplainAny, state.missions], seed)
-  const aDone = missionA ? hasExplanationOn(state, missionA.id, dateStr) : false
-
-  const secondPool = noExplainAny.filter((m) => m.id !== missionA?.id)
-  const missionB = pickFromPools([secondPool, state.missions.filter((m) => m.id !== missionA?.id), state.missions], seed + 1)
-  const bDone = missionB ? hasExplanationOn(state, missionB.id, dateStr) : false
+  const card = pickForkCard(seed)
+  const caseFile = pickCaseFile(state, seed, dateStr)
+  const explainMission = pickExplainStarterMission(state, seed, dateStr)
 
   return {
-    name: '언어화의 수요일',
-    tagline: '코드를 짜는 대신, 말이 되게 만드는 날.',
+    name: '교양의 수요일',
+    tagline: '읽고 수사하고 문장의 첫 단추만 고릅니다.',
     slots: [
-      makeRoutineSlot(state, {
-        kind: 'readingCard',
-        title: card?.bookTitle ?? null,
-        linkTo: card ? `/games?card=${card.id}` : '/games',
-        emoji: card?.emoji ?? '📖',
-        time: '출근길 · ~11시',
-        label: '독서 카드 읽기',
-        done: cardDone,
-        dateStr,
-        manualCheckable: true,
-        checkIndex: 0,
-      }),
-      makeRoutineSlot(state, { kind: 'explain', mission: missionA, emoji: '🍜', time: '점심 · 11~17시', label: '설명 훈련 (1)', done: aDone, dateStr }),
-      makeRoutineSlot(state, { kind: 'explain', mission: missionB, emoji: '🌙', time: '저녁 · 17시~', label: '설명 훈련 (2)', done: bDone, dateStr }),
+      makeRoutineSlot(state, { kind: 'cardFork', title: card?.bookTitle ?? null, linkTo: card ? `/games?card=${card.id}` : '/games', emoji: card?.emoji ?? '📖', time: '출근길 · ~11시', label: '독서 카드 + 갈래', done: !!(card && state.cardForkChoices[card.id]), dateStr }),
+      makeRoutineSlot(state, { kind: 'caseClue', title: caseClueTitle(state, caseFile, dateStr), linkTo: caseFile ? `/games/case/${caseFile.id}` : '/games', emoji: '🍜', time: '점심 · 11~17시', label: '사건 파일 오늘 단서', done: caseClueDone(state, caseFile, dateStr), dateStr }),
+      makeRoutineSlot(state, { kind: 'explainStarter', mission: explainMission, linkTo: explainMission ? `/missions/${explainMission.id}?tab=explain#explain-starters` : '/missions', emoji: '🌙', time: '저녁 · 17시~', label: '설명 시작 칩 고르기 (문장 완성은 선택)', done: state.explainChipSelections[dateStr]?.missionId === explainMission?.id, dateStr }),
     ],
   }
 }
@@ -346,18 +393,16 @@ function buildThursday(state, seed, dateStr) {
     [plannerCapable.filter((m) => !state.plannerSubmissions[m.id]?.review), plannerCapable, state.missions],
     seed,
   )
-  const reviewDone = mission ? donePlannerReviewOn(state, mission.id, dateStr) : false
-  const readDone = reviewDone || !!state.routineChecks[dateStr]?.[0]
-  const explainMission = pickExplainMission(state, seed)
-  const explainDone = explainMission ? hasExplanationOn(state, explainMission.id, dateStr) : false
+  const meetingMission = pickMeetingMission(state, seed)
+  const forkCard = pickForkCard(seed)
 
   return {
     name: '기획자의 목요일',
     tagline: '코드가 아니라 결정을 씁니다 — 검토서로 여는 하루.',
     slots: [
-      makeRoutineSlot(state, { kind: 'read', mission, emoji: '🚆', time: '출근길 · ~11시', label: mission ? '기획자 브리핑 읽기' : '브리핑 읽기', done: readDone, dateStr, manualCheckable: true, checkIndex: 0 }),
-      makeRoutineSlot(state, { kind: 'plannerReview', mission, emoji: '🍜', time: '점심 · 11~17시', label: '검토서 제출', done: reviewDone, dateStr }),
-      makeRoutineSlot(state, { kind: 'explain', mission: explainMission, emoji: '🌙', time: '저녁 · 17시~', label: '설명 훈련', done: explainDone, dateStr }),
+      makeRoutineSlot(state, { kind: 'read', mission, emoji: '🚆', time: '출근길 · ~11시', label: mission ? '기획자 브리핑 읽기' : '브리핑 읽기', done: !!state.routineChecks[dateStr]?.[0], dateStr, manualCheckable: true, checkIndex: 0 }),
+      makeRoutineSlot(state, { kind: 'plannerMeeting', mission: meetingMission, linkTo: meetingMission ? `/missions/${meetingMission.id}?mode=plannerMeeting#meeting-room` : '/missions', emoji: '🍜', time: '점심 · 11~17시', label: '회의 질문 칩 3개 던지기', done: meetingQuestionCountOn(state, meetingMission?.id, dateStr) >= 3, dateStr }),
+      makeRoutineSlot(state, { kind: 'cardFork', title: forkCard?.bookTitle ?? null, linkTo: forkCard ? `/games?card=${forkCard.id}` : '/games', emoji: forkCard?.emoji ?? '📖', time: '저녁 · 17시~', label: '카드 갈래 1장', done: !!(forkCard && state.cardForkChoices[forkCard.id]), dateStr }),
     ],
   }
 }
@@ -367,7 +412,6 @@ function buildFriday(state, seed, dateStr) {
   const anySubmitted = state.missions.filter((m) => state.submissions[m.id]?.length)
   const recapMission = pickFromPools([recentlySubmitted, anySubmitted, state.missions], seed)
   const recapChecked = !!state.routineChecks[dateStr]?.[0]
-  const freeDone = hasAnySubmissionOn(state, dateStr) || !!state.routineChecks[dateStr]?.[1]
   const explainMission = pickExplainMission(state, seed)
   const explainDone = explainMission ? hasExplanationOn(state, explainMission.id, dateStr) : false
 
@@ -387,20 +431,8 @@ function buildFriday(state, seed, dateStr) {
         manualCheckable: true,
         checkIndex: 0,
       }),
-      makeRoutineSlot(state, {
-        kind: 'freeSubmit',
-        title: '오늘 안 한 것 아무거나 — 재제출도 좋습니다',
-        linkTo: '/missions',
-        emoji: '🍜',
-        time: '점심 · 11~17시',
-        label: '자유 제출',
-        done: freeDone,
-        dateStr,
-        manualCheckable: true,
-        checkIndex: 1,
-        checkLabel: '했어요 ✓',
-      }),
-      makeRoutineSlot(state, { kind: 'explain', mission: explainMission, emoji: '🌙', time: '저녁 · 17시~', label: '설명 훈련', done: explainDone, dateStr }),
+      makeRoutineSlot(state, { kind: 'swipeReview', title: '오늘의 판정 5장', linkTo: '/routine/swipe', emoji: '🍜', time: '점심 · 11~17시', label: '머지 or 반려', done: !!state.swipeSessions[dateStr], dateStr }),
+      makeRoutineSlot(state, { kind: 'explain', mission: explainMission, linkTo: explainMission ? `/missions/${explainMission.id}?tab=explain` : '/missions', emoji: '🌙', time: '저녁 · 17시~', label: '설명 훈련 (선택·주중 유일 타이핑)', done: explainDone, dateStr }),
     ],
   }
 }
@@ -543,12 +575,18 @@ const state = reactive({
   routineHistory: persisted.routineHistory ?? {},
   // 오늘의 훈련: 읽기 전용 슬롯의 수동 체크('읽었어요' 등). { 'YYYY-MM-DD': { [slotCheckIndex]: boolean } }
   routineChecks: persisted.routineChecks ?? {},
+  // 머지 or 반려 게임을 끝낸 날짜. { 'YYYY-MM-DD': true }
+  swipeSessions: persisted.swipeSessions ?? {},
   // 입력 원칙 — 선택 우선: 코드 판독/설계 리뷰 제출의 구조화 빌더 카드 초안.
   // missionId -> [{ location, severity, symptom, cause, fix }]
   findingsDrafts: persisted.findingsDrafts ?? {},
   // 입력 원칙 — 결말 예측 투표(원탭). missionId -> 'calm' | 'hotfix' | 'dawn'
   endingPredictions: persisted.endingPredictions ?? {},
-  // 사건 파일 진행도. caseId -> { openedDays, lastOpenedDate, verdict? }
+  // 결말 예측을 선택한 로컬 날짜. 일일 루틴 완료 판정에만 사용한다.
+  endingPredictionDates: persisted.endingPredictionDates ?? {},
+  // 설명 시작 칩을 고른 날짜별 기록. { 'YYYY-MM-DD': { missionId, chipIndex } }
+  explainChipSelections: persisted.explainChipSelections ?? {},
+  // 사건 파일 진행도. caseId -> { openedDays, lastOpenedDate, lastViewedDate, verdict? }
   caseProgress: persisted.caseProgress ?? {},
   // 독서·시사회 카드 갈래 질문의 최초 선택. cardId -> choice key
   cardForkChoices: persisted.cardForkChoices ?? {},
@@ -562,8 +600,11 @@ const JOURNAL_KEYS = [
   'projectSubmissions',
   'routineHistory',
   'routineChecks',
+  'swipeSessions',
   'findingsDrafts',
   'endingPredictions',
+  'endingPredictionDates',
+  'explainChipSelections',
   'caseProgress',
   'cardForkChoices',
   'seasonStats',
@@ -589,8 +630,11 @@ function persist({ syncJournal = true } = {}) {
       reviews: state.reviews,
       routineHistory: state.routineHistory,
       routineChecks: state.routineChecks,
+      swipeSessions: state.swipeSessions,
       findingsDrafts: state.findingsDrafts,
       endingPredictions: state.endingPredictions,
+      endingPredictionDates: state.endingPredictionDates,
+      explainChipSelections: state.explainChipSelections,
       caseProgress: state.caseProgress,
       cardForkChoices: state.cardForkChoices,
       seasonStats: state.seasonStats,
@@ -954,6 +998,14 @@ export function useMissions() {
       persist()
     },
 
+    completeSwipeSession() {
+      const dateStr = localDateStr()
+      if (state.swipeSessions[dateStr]) return false
+      state.swipeSessions[dateStr] = true
+      persist()
+      return true
+    },
+
     seasonOverview() {
       return buildSeasonOverview(state.seasonStats, state.routineHistory, seasons.seasonEndings)
     },
@@ -973,13 +1025,13 @@ export function useMissions() {
       const maximum = Math.max(1, Number(totalDays) || 1)
       const existing = state.caseProgress[caseId]
       if (!existing) {
-        state.caseProgress[caseId] = { openedDays: 1, lastOpenedDate: today }
+        state.caseProgress[caseId] = { openedDays: 1, lastOpenedDate: today, lastViewedDate: today }
         persist()
         return state.caseProgress[caseId]
       }
 
       const openedDays = Math.min(maximum, Math.max(1, Number(existing.openedDays) || 1))
-      const next = { ...existing, openedDays }
+      const next = { ...existing, openedDays, lastViewedDate: today }
       if (!existing.lastOpenedDate) {
         next.lastOpenedDate = today
       } else if (existing.lastOpenedDate < today && openedDays < maximum) {
@@ -1035,7 +1087,16 @@ export function useMissions() {
 
     predictEnding(missionId, grade) {
       state.endingPredictions[missionId] = grade
+      state.endingPredictionDates[missionId] = localDateStr()
       persist()
+    },
+
+    chooseExplainStarter(missionId, chipIndex) {
+      if (!missionId || !Number.isInteger(chipIndex)) return false
+      const dateStr = localDateStr()
+      state.explainChipSelections[dateStr] = { missionId, chipIndex }
+      persist()
+      return true
     },
 
     settleEndingPrediction(missionId, actualGrade) {

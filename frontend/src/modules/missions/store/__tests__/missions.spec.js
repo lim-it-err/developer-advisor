@@ -190,20 +190,35 @@ describe('missions store 특성화', () => {
     expect(secondDeck).toEqual(firstDeck)
   })
 
-  it('수요일과 주말 첫 슬롯을 날짜별 독서·시사회 카드로 결정한다', async () => {
+  it('평일은 지정된 노코드 슬롯만 배치하고 주말 프로젝트 코딩은 유지한다', async () => {
     const store = await loadStore()
 
-    const wednesday = store.routineForWeekday(3)
-    const saturday = store.routineForWeekday(6)
+    const expected = {
+      1: ['사건 파일 오늘 단서', '머지 or 반려', '카드 갈래 1장'],
+      2: ['설계 리뷰 미션 읽기', '결말 예측 1건', '머지 or 반려'],
+      3: ['독서 카드 + 갈래', '사건 파일 오늘 단서', '설명 시작 칩 고르기 (문장 완성은 선택)'],
+      4: ['기획자 브리핑 읽기', '회의 질문 칩 3개 던지기', '카드 갈래 1장'],
+      5: ['이번 주 리뷰 다시 읽기', '머지 or 반려', '설명 훈련 (선택·주중 유일 타이핑)'],
+    }
 
-    expect(wednesday.slots[0]).toMatchObject({
-      kind: 'readingCard',
-      missionId: null,
-      label: '독서 카드 읽기',
-      manualCheckable: true,
-      checkIndex: 0,
-    })
+    for (const [weekday, labels] of Object.entries(expected)) {
+      const routine = store.routineForWeekday(Number(weekday))
+      expect(routine.slots.map((slot) => slot.label)).toEqual(labels)
+      expect(routine.slots).toHaveLength(3)
+      expect(routine.slots.some((slot) => slot.kind === 'submit')).toBe(false)
+    }
+
+    const wednesday = store.routineForWeekday(3)
+    expect(wednesday.slots[0]).toMatchObject({ kind: 'cardFork', missionId: null })
     expect(wednesday.slots[0].linkTo).toMatch(/^\/games\?card=read-/)
+
+    for (const weekendDay of [0, 6]) {
+      const weekend = store.routineForWeekday(weekendDay)
+      expect(weekend.slots.map((slot) => slot.kind)).toEqual(['cinemaCard', 'project'])
+      expect(weekend.slots).toHaveLength(2)
+    }
+
+    const saturday = store.routineForWeekday(6)
     expect(saturday.slots[0]).toMatchObject({
       kind: 'cinemaCard',
       missionId: null,
@@ -212,19 +227,76 @@ describe('missions store 특성화', () => {
       checkIndex: 0,
     })
     expect(saturday.slots[0].linkTo).toMatch(/^\/games\?card=film-/)
-    expect(store.routineForWeekday(3).slots[0]).toEqual(wednesday.slots[0])
-    expect(store.routineForWeekday(6).slots[0]).toEqual(saturday.slots[0])
+  })
+
+  it('스와이프·사건 열람·예측·설명 칩을 당일 루틴 완료로 기록한다', async () => {
+    const store = await loadStore()
+
+    expect(store.routineToday().slots[1]).toMatchObject({ kind: 'swipeReview', done: false })
+    expect(store.completeSwipeSession()).toBe(true)
+    expect(store.completeSwipeSession()).toBe(false)
+    expect(store.routineToday().slots[1].done).toBe(true)
+
+    const mondayCaseId = store.routineToday().slots[0].linkTo.split('/').at(-1)
+    store.openCase(mondayCaseId, 5)
+    expect(store.routineToday().slots[0].done).toBe(true)
+    expect(store.state.caseProgress[mondayCaseId].lastViewedDate).toBe('2026-08-03')
+
+    vi.setSystemTime(new Date('2026-08-04T09:00:00+09:00'))
+    const tuesday = store.routineToday()
+    const predictionMissionId = tuesday.slots[1].missionId
+    store.predictEnding(predictionMissionId, 'hotfix')
+    expect(store.routineToday().slots[1]).toMatchObject({
+      kind: 'endingPrediction',
+      missionId: predictionMissionId,
+      done: true,
+    })
+
+    vi.setSystemTime(new Date('2026-08-05T09:00:00+09:00'))
+    const wednesday = store.routineToday()
+    const explainMissionId = wednesday.slots[2].missionId
+    expect(store.chooseExplainStarter(explainMissionId, 0)).toBe(true)
+    expect(store.routineToday().slots[2]).toMatchObject({
+      kind: 'explainStarter',
+      missionId: explainMissionId,
+      done: true,
+    })
+
+    vi.setSystemTime(new Date('2026-08-06T09:00:00+09:00'))
+    const thursday = store.routineToday()
+    const meetingMissionId = thursday.slots[1].missionId
+    const meetingRequests = [
+      store.sendMeetingChat(meetingMissionId, '첫 번째 질문'),
+      store.sendMeetingChat(meetingMissionId, '두 번째 질문'),
+      store.sendMeetingChat(meetingMissionId, '세 번째 질문'),
+    ]
+    await Promise.resolve()
+    await vi.runOnlyPendingTimersAsync()
+    await Promise.all(meetingRequests)
+    expect(store.routineToday().slots[1]).toMatchObject({
+      kind: 'plannerMeeting',
+      missionId: meetingMissionId,
+      done: true,
+    })
+
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY))
+    expect(saved.swipeSessions['2026-08-03']).toBe(true)
+    expect(saved.endingPredictionDates[predictionMissionId]).toBe('2026-08-04')
+    expect(saved.explainChipSelections['2026-08-05']).toEqual({
+      missionId: explainMissionId,
+      chipIndex: 0,
+    })
   })
 
   it('오늘부터 이어진 완료일만 스트릭으로 세고 단절 뒤의 기록은 제외한다', async () => {
     const continuous = await loadStore({
-      routineChecks: { '2026-08-03': { 0: true } },
+      swipeSessions: { '2026-08-03': true },
       routineHistory: { '2026-08-02': 1, '2026-08-01': 2 },
     })
     expect(continuous.routineToday().streak).toBe(3)
 
     const broken = await loadStore({
-      routineChecks: { '2026-08-03': { 0: true } },
+      swipeSessions: { '2026-08-03': true },
       routineHistory: { '2026-08-02': 0, '2026-08-01': 2 },
     })
     expect(broken.routineToday().streak).toBe(1)
@@ -322,6 +394,7 @@ describe('missions store 특성화', () => {
     expect(store.openCase(caseId, 5)).toMatchObject({
       openedDays: 1,
       lastOpenedDate: '2026-08-03',
+      lastViewedDate: '2026-08-03',
     })
     expect(store.openCase(caseId, 5).openedDays).toBe(1)
 

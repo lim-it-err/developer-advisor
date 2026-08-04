@@ -83,7 +83,7 @@ test('프로젝트 여정: 첫 제출이 두 번째 소미션을 해금한다', 
   await expect(page.getByRole('button', { name: /대여와 반납 — 규칙이 코드가 되는 순간/ })).toBeEnabled()
 })
 
-test('루틴: 출근길 체크가 홈 배너 카운트에 반영된다', async ({ page }) => {
+test('루틴: 평일 노코드 슬롯과 주말 프로젝트 슬롯을 요일별로 보여준다', async ({ page }) => {
   const errors: string[] = []
   page.on('console', (message) => {
     if (message.type() === 'error') errors.push(message.text())
@@ -94,8 +94,41 @@ test('루틴: 출근길 체크가 홈 배너 카운트에 반영된다', async (
   await page.getByRole('link', { name: '오늘의 훈련', exact: true }).click()
 
   await expect(page.locator('.slot')).toHaveCount(3)
-  await expect(page.getByText('출근길 · ~11시')).toBeVisible()
-  await page.getByRole('button', { name: '읽었어요 ✓' }).click()
+  const weekdayLabels = [
+    ['월', ['사건 파일 오늘 단서', '머지 or 반려', '카드 갈래 1장']],
+    ['화', ['설계 리뷰 미션 읽기', '결말 예측 1건', '머지 or 반려']],
+    ['수', ['독서 카드 + 갈래', '사건 파일 오늘 단서', '설명 시작 칩 고르기 (문장 완성은 선택)']],
+    ['목', ['기획자 브리핑 읽기', '회의 질문 칩 3개 던지기', '카드 갈래 1장']],
+    ['금', ['이번 주 리뷰 다시 읽기', '머지 or 반려', '설명 훈련 (선택·주중 유일 타이핑)']],
+  ] as const
+
+  for (const [day, labels] of weekdayLabels) {
+    await page.getByRole('button', { name: day, exact: true }).click()
+    await expect(page.locator('.slot-label')).toHaveText([...labels])
+  }
+
+  await page.getByRole('button', { name: '화', exact: true }).click()
+  await page.locator('.slot').nth(1).getByRole('link').click()
+  await expect(page).toHaveURL(/\?tab=mission#ending-prediction$/)
+  await expect(page.locator('#ending-prediction')).toBeVisible()
+
+  await page.goto('/routine')
+  await page.getByRole('button', { name: '수', exact: true }).click()
+  await page.locator('.slot').nth(2).getByRole('link').click()
+  await expect(page).toHaveURL(/\?tab=explain#explain-starters$/)
+  await expect(page.locator('#explain-starters')).toBeVisible()
+
+  await page.goto('/routine')
+  await page.getByRole('button', { name: '목', exact: true }).click()
+  await page.locator('.slot').nth(1).getByRole('link').click()
+  await expect(page).toHaveURL(/\?mode=plannerMeeting#meeting-room$/)
+  await expect(page.locator('#meeting-room')).toBeVisible()
+
+  await page.goto('/routine')
+  await page.getByRole('button', { name: '월', exact: true }).click()
+  await page.locator('.slot').first().getByRole('link').click()
+  await expect(page).toHaveURL(/\/games\/case\//)
+  await page.goto('/routine')
   await expect(page.getByText('✓ 완료')).toBeVisible()
 
   await page.getByRole('link', { name: /Developer Advisor/ }).click()
@@ -104,7 +137,7 @@ test('루틴: 출근길 체크가 홈 배너 카운트에 반영된다', async (
   await page.getByRole('link', { name: '오늘의 훈련', exact: true }).click()
   await page.getByRole('button', { name: '수', exact: true }).click()
   const readingSlot = page.locator('.slot').first()
-  await expect(readingSlot.getByText('독서 카드 읽기')).toBeVisible()
+  await expect(readingSlot.getByText('독서 카드 + 갈래')).toBeVisible()
   const readingCardLink = readingSlot.getByRole('link')
   await expect(readingCardLink).toHaveAttribute('href', /^\/games\?card=read-/)
   const readingTitle = (await readingCardLink.textContent())?.trim()
@@ -143,6 +176,8 @@ test('머지 or 반려: 375px에서 5장 판정 후 세션 요약을 본다', as
   await expect(page.getByRole('heading', { name: '5장 판정 완료' })).toBeVisible()
   await expect(page.getByText('맞은 판정')).toBeVisible()
   await expect(page.getByText('근거 적중')).toBeVisible()
+  const persisted = await page.evaluate(() => JSON.parse(localStorage.getItem('advisor.learner.v1') ?? '{}'))
+  expect(Object.values(persisted.swipeSessions ?? {})).toContain(true)
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
   expect(errors).toEqual([])
 })
@@ -225,7 +260,7 @@ test('사건 파일: Day 1부터 몰아보고 근본 원인을 한 번 지목한
 })
 
 test('시즌: 루틴 수동 체크가 교양 +1과 최근 적립 로그에 반영된다', async ({ page }) => {
-  await page.clock.setFixedTime(new Date('2026-08-03T08:00:00'))
+  await page.clock.setFixedTime(new Date('2026-08-04T08:00:00'))
   await page.evaluate(() => {
     localStorage.setItem('advisor.learner.v1', JSON.stringify({
       learner: { nickname: 'Codex E2E' },

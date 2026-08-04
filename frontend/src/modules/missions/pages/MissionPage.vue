@@ -29,7 +29,8 @@ const MODE_META = {
   plannerMeeting: { label: '🤝 기획자 · 회의' },
   plannerReview: { label: '📋 기획자 · 검토' },
 }
-const mode = ref('developer')
+const requestedMode = typeof route.query.mode === 'string' ? route.query.mode : ''
+const mode = ref(mission.value?.modes?.includes(requestedMode) ? requestedMode : 'developer')
 
 // 결말 분기 상태창 메타 (grade: calm | hotfix | dawn | hidden)
 const ENDING_META = {
@@ -47,7 +48,8 @@ function predictEnding(grade) {
 }
 
 const TABS = ['도메인 브리핑', '미션', '제출', '설명 훈련']
-const tab = ref('도메인 브리핑')
+const TAB_QUERY = { mission: '미션', submit: '제출', explain: '설명 훈련' }
+const tab = ref(TAB_QUERY[route.query.tab] ?? '도메인 브리핑')
 
 // 제출 상태 — submissions는 버전 배열(재제출 시 append). 최신 버전을 편집 초기값으로 쓴다.
 const submissionVersions = computed(() => store.state.submissions[route.params.id] ?? [])
@@ -116,6 +118,7 @@ function insertExplainTemplate(i, template) {
   if (usedExplainChips.value.includes(i)) return
   explainText.value = explainText.value.trim() ? `${explainText.value}\n\n${template}` : template
   usedExplainChips.value.push(i)
+  store.chooseExplainStarter(mission.value.id, i)
 }
 
 function doSubmitExplanation() {
@@ -197,7 +200,7 @@ function submitExplanation() {
       </div>
 
       <!-- 결말 분기: 이 코드의 가능한 미래들 (게임 상태창) -->
-      <div v-if="mission.endings?.length" class="card block endings">
+      <div v-if="mission.endings?.length" id="ending-prediction" class="card block endings">
         <h2 class="panel-title">🎮 결말 분기 <span class="endings-sub">— 이 코드의 가능한 미래들. 리뷰의 시나리오가 도달한 결말을 알려줍니다.</span></h2>
         <div class="ending-rows">
           <div
@@ -325,7 +328,7 @@ function submitExplanation() {
         <p><strong>청자:</strong> {{ mission.explainTask.audience }}</p>
         <MarkdownBlock :source="mission.explainTask.prompt" />
       </div>
-      <div class="chip-row">
+      <div id="explain-starters" class="chip-row">
         <button
           v-for="(c, i) in EXPLAIN_CHIPS"
           :key="i"
