@@ -18,6 +18,7 @@ const isToday = computed(() => selectedDay.value === todayDay)
 const routine = computed(() =>
   isToday.value ? store.routineToday() : store.routineForWeekday(selectedDay.value),
 )
+const caseBanner = computed(() => store.ongoingCaseBanner())
 
 const dateLabel = computed(() =>
   isToday.value
@@ -67,6 +68,16 @@ function check(slot) {
         다른 요일의 덱입니다 — 미션은 지금 바로 해도 되지만, 체크와 스트릭은 당일에만 쌓입니다.
       </p>
     </section>
+
+    <router-link
+      v-if="caseBanner"
+      :to="caseBanner.linkTo"
+      class="case-banner card"
+      data-testid="ongoing-case-banner"
+    >
+      <span class="case-banner-main">🕵️ 수사 진행 중 — Day {{ caseBanner.day }} 단서 열기</span>
+      <span class="case-banner-title">{{ caseBanner.title }}</span>
+    </router-link>
 
     <div class="slots">
       <div
@@ -144,6 +155,21 @@ function check(slot) {
 .theme-name { display: block; font-weight: 700; font-size: 14px; color: var(--accent); }
 .theme-tagline { display: block; color: var(--fg-dim); font-size: 12.5px; margin-top: 2px; }
 
+.case-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: -4px 0 14px;
+  padding: 11px 14px;
+  border-color: rgba(224, 175, 104, 0.4);
+  color: var(--fg);
+  text-decoration: none;
+}
+.case-banner:hover { border-color: var(--warn); }
+.case-banner-main { color: var(--warn); font-size: 13px; font-weight: 700; }
+.case-banner-title { color: var(--fg-dim); font-size: 12px; text-align: right; }
+
 .slots {
   display: flex;
   flex-direction: column;
@@ -214,5 +240,10 @@ function check(slot) {
 @media (min-width: 560px) {
   .hero h1 { font-size: 24px; }
   .slot { padding: 20px 22px; }
+}
+
+@media (max-width: 420px) {
+  .case-banner { align-items: flex-start; flex-direction: column; gap: 3px; }
+  .case-banner-title { text-align: left; }
 }
 </style>

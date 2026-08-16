@@ -84,6 +84,11 @@ test('프로젝트 여정: 첫 제출이 두 번째 소미션을 해금한다', 
 })
 
 test('루틴: 평일 노코드 슬롯과 주말 프로젝트 슬롯을 요일별로 보여준다', async ({ page }) => {
+  await page.route('http://localhost:8080/api/advisor/chat/preview', (route) => route.fulfill({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify({ text: '[기획팀장] 숫자는 이렇습니다.' }),
+  }))
   const errors: string[] = []
   page.on('console', (message) => {
     if (message.type() === 'error') errors.push(message.text())
@@ -98,8 +103,8 @@ test('루틴: 평일 노코드 슬롯과 주말 프로젝트 슬롯을 요일별
     ['월', ['사건 파일 오늘 단서', '머지 or 반려', '카드 갈래 1장']],
     ['화', ['설계 리뷰 미션 읽기', '결말 예측 1건', '머지 or 반려']],
     ['수', ['독서 카드 + 갈래', '사건 파일 오늘 단서', '설명 시작 칩 고르기 (문장 완성은 선택)']],
-    ['목', ['기획자 브리핑 읽기', '회의 질문 칩 3개 던지기', '카드 갈래 1장']],
-    ['금', ['이번 주 리뷰 다시 읽기', '머지 or 반려', '설명 훈련 (선택·주중 유일 타이핑)']],
+    ['목', ['기획자 브리핑 읽기', '회의 질문 칩 1개 던지기', '카드 갈래 1장']],
+    ['금', ['아직 되짚을 리뷰가 없습니다', '머지 or 반려', '설명 훈련 (선택·주중 유일 타이핑)']],
   ] as const
 
   for (const [day, labels] of weekdayLabels) {
@@ -107,6 +112,12 @@ test('루틴: 평일 노코드 슬롯과 주말 프로젝트 슬롯을 요일별
     await expect(page.locator('.slot-label')).toHaveText([...labels])
   }
 
+  await page.getByRole('button', { name: '화', exact: true }).click()
+  await page.locator('.slot').first().getByRole('link').click()
+  await expect(page).toHaveURL(/\?tab=briefing#mission-briefing$/)
+  await expect(page.locator('#mission-briefing')).toBeVisible()
+
+  await page.goto('/routine')
   await page.getByRole('button', { name: '화', exact: true }).click()
   await page.locator('.slot').nth(1).getByRole('link').click()
   await expect(page).toHaveURL(/\?tab=mission#ending-prediction$/)
@@ -123,12 +134,21 @@ test('루틴: 평일 노코드 슬롯과 주말 프로젝트 슬롯을 요일별
   await page.locator('.slot').nth(1).getByRole('link').click()
   await expect(page).toHaveURL(/\?mode=plannerMeeting#meeting-room$/)
   await expect(page.locator('#meeting-room')).toBeVisible()
+  await page.getByRole('button', { name: '회의 시작' }).click()
+  const instantQuestion = '그 입장의 근거 숫자를 보여주실 수 있나요?'
+  await page.getByRole('button', { name: instantQuestion }).click()
+  await expect(page.locator('.msg.me')).toHaveText(instantQuestion)
+  const meetingState = await page.evaluate(() => JSON.parse(localStorage.getItem('advisor.learner.v1') ?? '{}'))
+  expect(Object.values(meetingState.meetingChats ?? {}).flat().filter(
+    (message: { role: string }) => message.role === 'me',
+  )).toHaveLength(1)
 
   await page.goto('/routine')
   await page.getByRole('button', { name: '월', exact: true }).click()
   await page.locator('.slot').first().getByRole('link').click()
   await expect(page).toHaveURL(/\/games\/case\//)
   await page.goto('/routine')
+  await expect(page.getByTestId('ongoing-case-banner')).toContainText('수사 진행 중 — Day 1 단서 열기')
   await expect(page.getByText('✓ 완료')).toBeVisible()
 
   await page.getByRole('link', { name: /Developer Advisor/ }).click()
@@ -205,6 +225,7 @@ test('카드 갈래: 첫 선택을 저장하고 반대 입장도 본 뒤 새로�
 
   const persisted = await page.evaluate(() => JSON.parse(localStorage.getItem('advisor.learner.v1') ?? '{}'))
   expect(persisted.cardForkChoices['read-ggs-01']).toBe('blessing')
+  expect(persisted.cardForkChoiceDates['read-ggs-01']).toMatch(/^\d{4}-\d{2}-\d{2}$/)
   expect(persisted.seasonStats.gains.filter(
     (gain: { source: string }) => gain.source === 'card-fork:read-ggs-01',
   )).toHaveLength(1)

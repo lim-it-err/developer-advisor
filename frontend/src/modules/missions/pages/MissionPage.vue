@@ -48,7 +48,7 @@ function predictEnding(grade) {
 }
 
 const TABS = ['도메인 브리핑', '미션', '제출', '설명 훈련']
-const TAB_QUERY = { mission: '미션', submit: '제출', explain: '설명 훈련' }
+const TAB_QUERY = { briefing: '도메인 브리핑', mission: '미션', submit: '제출', explain: '설명 훈련' }
 const tab = ref(TAB_QUERY[route.query.tab] ?? '도메인 브리핑')
 
 // 제출 상태 — submissions는 버전 배열(재제출 시 append). 최신 버전을 편집 초기값으로 쓴다.
@@ -184,7 +184,7 @@ function submitExplanation() {
     </nav>
 
     <!-- 도메인 브리핑: 코드 전에 세상 먼저 -->
-    <section v-if="tab === '도메인 브리핑'" class="panel card">
+    <section v-if="tab === '도메인 브리핑'" id="mission-briefing" class="panel card">
       <h2 class="panel-title">{{ mission.briefing.title }}</h2>
       <MarkdownBlock :source="mission.briefing.content" />
       <div class="panel-next">
