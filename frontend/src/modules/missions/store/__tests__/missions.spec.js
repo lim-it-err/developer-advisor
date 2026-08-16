@@ -442,6 +442,24 @@ describe('missions store 특성화', () => {
     expect(saved.seasonStats.gains.filter((gain) => gain.source.startsWith('probe-'))).toHaveLength(2)
   })
 
+  it('경계 게임은 최초 선택만 저장하고 안목과 권장 경계 판단을 한 번만 적립한다', async () => {
+    const store = await loadStore()
+
+    expect(store.boundaryRoundForDate().id).toBe('boundary-transfer-01')
+    expect(store.chooseBoundary('debit-first')).toBe(true)
+    expect(store.chooseBoundary('sync-all')).toBe(false)
+
+    expect(store.state.boundarySessions['2026-08-03']).toEqual({
+      roundId: 'boundary-transfer-01',
+      chosenKey: 'debit-first',
+    })
+    expect(store.seasonOverview().totals).toMatchObject({ vision: 2, judgment: 1 })
+
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY))
+    expect(saved.boundarySessions).toEqual(store.state.boundarySessions)
+    expect(saved.seasonStats.gains.filter((gain) => gain.source.startsWith('boundary-'))).toHaveLength(2)
+  })
+
   it('카드 갈래는 최초 선택만 저장하고 교양을 카드당 한 번 적립한다', async () => {
     const store = await loadStore()
     const cardId = 'read-ggs-01'

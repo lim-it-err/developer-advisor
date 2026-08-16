@@ -251,6 +251,49 @@ test('한 번만 물어본다면: 관측으로 가설을 흐리고 지목 뒤 �
   expect(errors).toEqual([])
 })
 
+test('경계선 한 칸: 같은 운명 구간과 타임아웃 결과를 보고 다른 경계와 비교한다', async ({ page }) => {
+  const errors: string[] = []
+  page.on('console', (message) => {
+    if (message.type() === 'error') errors.push(message.text())
+  })
+  page.on('pageerror', (error) => errors.push(error.message))
+  await page.setViewportSize({ width: 375, height: 812 })
+  await page.clock.setFixedTime(new Date('2026-08-03T09:00:00'))
+  await page.evaluate(() => {
+    localStorage.setItem('advisor.learner.v1', JSON.stringify({
+      seasonStats: { seasonStart: '2026-08-03', gains: [] },
+    }))
+  })
+  await page.reload()
+
+  await page.getByRole('link', { name: '미니게임', exact: true }).click()
+  await page.getByRole('link', { name: /경계선 한 칸/ }).click()
+  await expect(page).toHaveURL(/\/games\/boundary$/)
+  await expect(page.getByRole('heading', { name: '타행 이체의 세 단계' })).toBeVisible()
+  await expect(page.locator('.flow-step')).toHaveCount(4)
+
+  await page.getByRole('button', { name: /출금 먼저 확정/ }).click()
+  await expect(page.locator('.flow-step.grouped')).toHaveCount(1)
+  await expect(page.getByText('⚡ 타임아웃 발생')).toBeVisible()
+  await expect(page.getByText(/돈의 보존/)).toBeVisible()
+  await expect(page.getByText('이 상황의 권장 · 정답 아님')).toBeVisible()
+
+  await page.getByRole('button', { name: /입금 확인까지 동기로/ }).click()
+  await expect(page.locator('.outcome-card')).toHaveCount(2)
+  await expect(page.getByText(/확실성을 동기로 사면/)).toBeVisible()
+
+  const persisted = await page.evaluate(() => JSON.parse(localStorage.getItem('advisor.learner.v1') ?? '{}'))
+  expect(persisted.boundarySessions['2026-08-03']).toEqual({
+    roundId: 'boundary-transfer-01',
+    chosenKey: 'debit-first',
+  })
+  expect(persisted.seasonStats.gains.filter(
+    (gain: { source: string }) => gain.source.startsWith('boundary-'),
+  )).toHaveLength(2)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+  expect(errors).toEqual([])
+})
+
 test('카드 갈래: 첫 선택을 저장하고 반대 입장도 본 뒤 새로고침하면 복원한다', async ({ page }) => {
   const errors: string[] = []
   page.on('console', (message) => {

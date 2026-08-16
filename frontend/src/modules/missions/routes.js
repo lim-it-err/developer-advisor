@@ -22,6 +22,11 @@ export const missionRoutes = [
     component: () => import('./pages/ProbeGamePage.vue'),
   },
   {
+    path: '/games/boundary',
+    name: 'boundary-game',
+    component: () => import('./pages/BoundaryGamePage.vue'),
+  },
+  {
     path: '/games/case/:caseId',
     name: 'case-file',
     component: () => import('./pages/CaseFilePage.vue'),

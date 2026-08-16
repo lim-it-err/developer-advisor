@@ -28,6 +28,8 @@ function sourceLabel(source) {
   if (kind === 'routine-check') return '루틴 수동 체크'
   if (kind === 'probe-verdict') return '한 번만 물어본다면 · 가설 지목'
   if (kind === 'probe-best') return '한 번만 물어본다면 · 최선의 관측'
+  if (kind === 'boundary-choice') return '경계선 한 칸 · 경계 선택'
+  if (kind === 'boundary-recommended') return '경계선 한 칸 · 상황의 권장'
   return source
 }
 

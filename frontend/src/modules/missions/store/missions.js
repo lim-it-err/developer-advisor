@@ -4,9 +4,14 @@ import { reactive } from 'vue'
 import sample from '../data/sampleContent.js'
 import projectSample from '../data/sampleProjects.js'
 import cards from '../data/sampleCards.js'
+import boundaryData from '../data/sampleBoundaryRounds.js'
 import caseFileData from '../data/sampleCaseFiles.js'
 import probeData from '../data/sampleProbeRounds.js'
 import seasons from '../data/sampleSeasons.js'
+import {
+  beginBoundarySession,
+  pickBoundaryRound,
+} from '../games/boundaryEngine.js'
 import {
   beginProbeSession,
   pickProbeRound,
@@ -634,6 +639,9 @@ const state = reactive({
   // 한 번만 물어본다면: 날짜별 단 한 번의 관측·가설 지목.
   // { 'YYYY-MM-DD': { roundId, probeKey, verdictKey } }
   probeSessions: persisted.probeSessions ?? {},
+  // 경계선 한 칸: 날짜별 최초 트랜잭션 경계 선택. 비교 열람은 저장하지 않는다.
+  // { 'YYYY-MM-DD': { roundId, chosenKey } }
+  boundarySessions: persisted.boundarySessions ?? {},
   // 입력 원칙 — 선택 우선: 코드 판독/설계 리뷰 제출의 구조화 빌더 카드 초안.
   // missionId -> [{ location, severity, symptom, cause, fix }]
   findingsDrafts: persisted.findingsDrafts ?? {},
@@ -661,6 +669,7 @@ const JOURNAL_KEYS = [
   'routineChecks',
   'swipeSessions',
   'probeSessions',
+  'boundarySessions',
   'findingsDrafts',
   'endingPredictions',
   'endingPredictionDates',
@@ -693,6 +702,7 @@ function persist({ syncJournal = true } = {}) {
       routineChecks: state.routineChecks,
       swipeSessions: state.swipeSessions,
       probeSessions: state.probeSessions,
+      boundarySessions: state.boundarySessions,
       findingsDrafts: state.findingsDrafts,
       endingPredictions: state.endingPredictions,
       endingPredictionDates: state.endingPredictionDates,
@@ -1104,6 +1114,28 @@ export function useMissions() {
       gainSeasonStat('judgment', 2, `probe-verdict:${round.id}`)
       if (session.probeKey === round.bestProbeKey) {
         gainSeasonStat('vision', 1, `probe-best:${round.id}`)
+      }
+      persist()
+      return true
+    },
+
+    boundaryRoundForDate(dateStr = localDateStr()) {
+      const savedRoundId = state.boundarySessions[dateStr]?.roundId
+      return boundaryData.boundaryRounds.find((round) => round.id === savedRoundId)
+        ?? pickBoundaryRound(boundaryData.boundaryRounds, dateStr)
+    },
+
+    chooseBoundary(boundaryKey) {
+      const dateStr = localDateStr()
+      if (state.boundarySessions[dateStr]) return false
+      const round = pickBoundaryRound(boundaryData.boundaryRounds, dateStr)
+      const session = beginBoundarySession(round, boundaryKey)
+      if (!session) return false
+
+      state.boundarySessions[dateStr] = session
+      gainSeasonStat('vision', 2, `boundary-choice:${round.id}`)
+      if (boundaryKey === round.recommendedKey) {
+        gainSeasonStat('judgment', 1, `boundary-recommended:${round.id}`)
       }
       persist()
       return true

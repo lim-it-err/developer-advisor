@@ -81,6 +81,14 @@ const upcoming = [
     <section class="block">
       <h2 class="sec">🎮 바로 플레이</h2>
       <div class="play-list">
+        <router-link to="/games/boundary" class="snack game-live card">
+          <span class="snack-emoji">✂️</span>
+          <span class="snack-body">
+            <span class="snack-title">경계선 한 칸</span>
+            <span class="snack-type">트랜잭션 경계 1탭 + 결과 비교 · 하루 한 판</span>
+          </span>
+          <span class="play-arrow">경계 긋기 →</span>
+        </router-link>
         <router-link to="/games/probe" class="snack game-live card">
           <span class="snack-emoji">🔬</span>
           <span class="snack-body">
