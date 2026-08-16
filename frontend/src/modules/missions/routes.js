@@ -17,6 +17,11 @@ export const missionRoutes = [
     component: () => import('./pages/GamesPage.vue'),
   },
   {
+    path: '/games/probe',
+    name: 'probe-game',
+    component: () => import('./pages/ProbeGamePage.vue'),
+  },
+  {
     path: '/games/case/:caseId',
     name: 'case-file',
     component: () => import('./pages/CaseFilePage.vue'),

@@ -421,6 +421,27 @@ describe('missions store 특성화', () => {
     expect(saved.caseProgress[caseId]).toMatchObject({ openedDays: 5, verdict: 'cron-idempotency' })
   })
 
+  it('가설·관측 게임은 하루 한 판을 저장하고 지목 시 판단과 최선 관측 안목을 한 번만 적립한다', async () => {
+    const store = await loadStore()
+
+    expect(store.probeRoundForDate().id).toBe('probe-slow-api-01')
+    expect(store.chooseProbe('slow-query')).toBe(true)
+    expect(store.chooseProbe('avg-cpu')).toBe(false)
+    expect(store.chooseProbeVerdict('index')).toBe(true)
+    expect(store.chooseProbeVerdict('gc')).toBe(false)
+
+    expect(store.state.probeSessions['2026-08-03']).toEqual({
+      roundId: 'probe-slow-api-01',
+      probeKey: 'slow-query',
+      verdictKey: 'index',
+    })
+    expect(store.seasonOverview().totals).toMatchObject({ vision: 1, judgment: 2 })
+
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY))
+    expect(saved.probeSessions).toEqual(store.state.probeSessions)
+    expect(saved.seasonStats.gains.filter((gain) => gain.source.startsWith('probe-'))).toHaveLength(2)
+  })
+
   it('카드 갈래는 최초 선택만 저장하고 교양을 카드당 한 번 적립한다', async () => {
     const store = await loadStore()
     const cardId = 'read-ggs-01'

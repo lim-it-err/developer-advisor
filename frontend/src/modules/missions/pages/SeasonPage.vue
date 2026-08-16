@@ -26,6 +26,8 @@ function sourceLabel(source) {
   if (kind === 'ending-prediction') return mission ? `결말 예측 적중 · ${mission.title}` : '결말 예측 적중'
   if (kind === 'planner-agreement') return mission ? `기획자 합의문 · ${mission.title}` : '기획자 합의문'
   if (kind === 'routine-check') return '루틴 수동 체크'
+  if (kind === 'probe-verdict') return '한 번만 물어본다면 · 가설 지목'
+  if (kind === 'probe-best') return '한 번만 물어본다면 · 최선의 관측'
   return source
 }
 

@@ -81,6 +81,14 @@ const upcoming = [
     <section class="block">
       <h2 class="sec">🎮 바로 플레이</h2>
       <div class="play-list">
+        <router-link to="/games/probe" class="snack game-live card">
+          <span class="snack-emoji">🔬</span>
+          <span class="snack-body">
+            <span class="snack-title">한 번만 물어본다면</span>
+            <span class="snack-type">관측 1탭 + 가설 지목 1탭 · 하루 한 판</span>
+          </span>
+          <span class="play-arrow">관측 →</span>
+        </router-link>
         <router-link to="/routine/swipe" class="snack game-live card">
           <span class="snack-emoji">🃏</span>
           <span class="snack-body">
