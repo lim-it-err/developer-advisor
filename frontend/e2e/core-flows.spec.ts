@@ -202,6 +202,55 @@ test('머지 or 반려: 375px에서 5장 판정 후 세션 요약을 본다', as
   expect(errors).toEqual([])
 })
 
+test('한 번만 물어본다면: 관측으로 가설을 흐리고 지목 뒤 정보량 해설을 본다', async ({ page }) => {
+  const errors: string[] = []
+  page.on('console', (message) => {
+    if (message.type() === 'error') errors.push(message.text())
+  })
+  page.on('pageerror', (error) => errors.push(error.message))
+  await page.setViewportSize({ width: 375, height: 812 })
+  await page.clock.setFixedTime(new Date('2026-08-03T09:00:00'))
+  await page.evaluate(() => {
+    localStorage.setItem('advisor.learner.v1', JSON.stringify({
+      seasonStats: { seasonStart: '2026-08-03', gains: [] },
+    }))
+  })
+  await page.reload()
+
+  await page.getByRole('link', { name: '미니게임', exact: true }).click()
+  await page.getByRole('link', { name: /한 번만 물어본다면/ }).click()
+  await expect(page).toHaveURL(/\/games\/probe$/)
+  await expect(page.getByRole('heading', { name: '금요일 오후의 p99' })).toBeVisible()
+
+  await page.getByRole('button', { name: '오늘 오후의 슬로우 쿼리 로그를 연다' }).click()
+  await expect(page.getByText(/order 테이블 full scan/)).toBeVisible()
+  const eliminated = page.locator('.hypothesis.eliminated')
+  await expect(eliminated).toHaveCount(2)
+  await expect.poll(() => eliminated.evaluateAll((nodes) => nodes.every((node) => {
+    const style = getComputedStyle(node)
+    return Number(style.opacity) < 0.5 && style.textDecorationLine === 'none'
+  }))).toBe(true)
+
+  await page.getByRole('button', { name: /DB 인덱스를 안 타는 쿼리가 생겼다/ }).click()
+  await expect(page.getByText('적중', { exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: '내 관측의 정보량' })).toBeVisible()
+  await expect(page.getByText('최선의 관측을 골랐습니다.')).toBeVisible()
+  await page.getByText('다른 관측들의 정보량 해설').click()
+  await expect(page.getByText(/결제사는 무죄/)).toBeVisible()
+
+  const persisted = await page.evaluate(() => JSON.parse(localStorage.getItem('advisor.learner.v1') ?? '{}'))
+  expect(persisted.probeSessions['2026-08-03']).toEqual({
+    roundId: 'probe-slow-api-01',
+    probeKey: 'slow-query',
+    verdictKey: 'index',
+  })
+  expect(persisted.seasonStats.gains.filter(
+    (gain: { source: string }) => gain.source.startsWith('probe-'),
+  )).toHaveLength(2)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+  expect(errors).toEqual([])
+})
+
 test('카드 갈래: 첫 선택을 저장하고 반대 입장도 본 뒤 새로고침하면 복원한다', async ({ page }) => {
   const errors: string[] = []
   page.on('console', (message) => {

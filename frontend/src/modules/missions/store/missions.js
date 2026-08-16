@@ -5,7 +5,13 @@ import sample from '../data/sampleContent.js'
 import projectSample from '../data/sampleProjects.js'
 import cards from '../data/sampleCards.js'
 import caseFileData from '../data/sampleCaseFiles.js'
+import probeData from '../data/sampleProbeRounds.js'
 import seasons from '../data/sampleSeasons.js'
+import {
+  beginProbeSession,
+  pickProbeRound,
+  settleProbeSession,
+} from '../games/probeEngine.js'
 import {
   buildSeasonOverview,
   localDateKey,
@@ -625,6 +631,9 @@ const state = reactive({
   routineChecks: persisted.routineChecks ?? {},
   // 머지 or 반려 게임을 끝낸 날짜. { 'YYYY-MM-DD': true }
   swipeSessions: persisted.swipeSessions ?? {},
+  // 한 번만 물어본다면: 날짜별 단 한 번의 관측·가설 지목.
+  // { 'YYYY-MM-DD': { roundId, probeKey, verdictKey } }
+  probeSessions: persisted.probeSessions ?? {},
   // 입력 원칙 — 선택 우선: 코드 판독/설계 리뷰 제출의 구조화 빌더 카드 초안.
   // missionId -> [{ location, severity, symptom, cause, fix }]
   findingsDrafts: persisted.findingsDrafts ?? {},
@@ -651,6 +660,7 @@ const JOURNAL_KEYS = [
   'routineHistory',
   'routineChecks',
   'swipeSessions',
+  'probeSessions',
   'findingsDrafts',
   'endingPredictions',
   'endingPredictionDates',
@@ -682,6 +692,7 @@ function persist({ syncJournal = true } = {}) {
       routineHistory: state.routineHistory,
       routineChecks: state.routineChecks,
       swipeSessions: state.swipeSessions,
+      probeSessions: state.probeSessions,
       findingsDrafts: state.findingsDrafts,
       endingPredictions: state.endingPredictions,
       endingPredictionDates: state.endingPredictionDates,
@@ -1058,6 +1069,42 @@ export function useMissions() {
       const dateStr = localDateStr()
       if (state.swipeSessions[dateStr]) return false
       state.swipeSessions[dateStr] = true
+      persist()
+      return true
+    },
+
+    probeRoundForDate(dateStr = localDateStr()) {
+      const savedRoundId = state.probeSessions[dateStr]?.roundId
+      return probeData.probeRounds.find((round) => round.id === savedRoundId)
+        ?? pickProbeRound(probeData.probeRounds, dateStr)
+    },
+
+    chooseProbe(probeKey) {
+      const dateStr = localDateStr()
+      if (state.probeSessions[dateStr]) return false
+      const round = probeData.probeRounds.find(
+        (candidate) => candidate.id === pickProbeRound(probeData.probeRounds, dateStr)?.id,
+      )
+      const session = beginProbeSession(round, probeKey)
+      if (!session) return false
+
+      state.probeSessions[dateStr] = session
+      persist()
+      return true
+    },
+
+    chooseProbeVerdict(verdictKey) {
+      const dateStr = localDateStr()
+      const session = state.probeSessions[dateStr]
+      const round = probeData.probeRounds.find((candidate) => candidate.id === session?.roundId)
+      const settled = settleProbeSession(round, session, verdictKey)
+      if (!session || settled === session) return false
+
+      state.probeSessions[dateStr] = settled
+      gainSeasonStat('judgment', 2, `probe-verdict:${round.id}`)
+      if (session.probeKey === round.bestProbeKey) {
+        gainSeasonStat('vision', 1, `probe-best:${round.id}`)
+      }
       persist()
       return true
     },
