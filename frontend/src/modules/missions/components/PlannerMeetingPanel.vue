@@ -20,16 +20,17 @@ const agreementText = ref(submission.value?.text ?? '')
 
 const messages = () => store.meetingMessages(props.missionId)
 
-// 입력 원칙 — 선택 우선: 회의용 좋은 질문 원형. 탭하면 입력창에 채워지고, 전송은 사용자가.
+// 입력 원칙 — 선택 우선: 회의용 좋은 질문 원형. 칩은 탭하는 즉시 전송한다.
 const QUESTION_CHIPS = [
   '그 입장의 근거 숫자를 보여주실 수 있나요?',
   '만약 ~라면 어디까지 양보 가능한가요?',
   '이 안건에서 각 팀이 절대 못 물러나는 선은 뭔가요?',
 ]
 const usedChips = ref([])
-function useChip(i, text) {
-  draft.value = text
+async function useChip(i, text) {
+  if (sending.value || usedChips.value.includes(i)) return
   if (!usedChips.value.includes(i)) usedChips.value.push(i)
+  await sendText(text)
 }
 
 async function scrollDown() {
@@ -44,16 +45,22 @@ function startMeeting() {
   scrollDown()
 }
 
-async function send() {
-  const text = draft.value.trim()
+async function sendText(value) {
+  const text = value.trim()
   if (!text || sending.value) return
-  draft.value = ''
   sending.value = true
   const p = store.sendMeetingChat(props.missionId, text, props.plannerMeeting.stakeholders ?? [])
   await scrollDown()
   await p
   sending.value = false
   await scrollDown()
+}
+
+async function sendDraft() {
+  const text = draft.value.trim()
+  if (!text || sending.value) return
+  draft.value = ''
+  await sendText(text)
 }
 
 const showNicknamePrompt = ref(false)
@@ -133,6 +140,7 @@ function onNicknameCancelled() {
             :key="i"
             class="q-chip"
             :class="{ used: usedChips.includes(i) }"
+            :disabled="sending || usedChips.includes(i)"
             @click="useChip(i, c)"
           >{{ c }}</button>
         </div>
@@ -141,9 +149,9 @@ function onNicknameCancelled() {
             v-model="draft"
             rows="2"
             placeholder="협상하거나 챌린지해 보세요. 공개 입장 뒤에 무엇이 있을지 물어보세요."
-            @keydown.enter.exact.prevent="send"
+            @keydown.enter.exact.prevent="sendDraft"
           ></textarea>
-          <button class="btn primary" :disabled="sending || !draft.trim()" @click="send">전송</button>
+          <button class="btn primary" :disabled="sending || !draft.trim()" @click="sendDraft">전송</button>
         </div>
       </template>
     </div>

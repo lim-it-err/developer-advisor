@@ -197,8 +197,8 @@ describe('missions store 특성화', () => {
       1: ['사건 파일 오늘 단서', '머지 or 반려', '카드 갈래 1장'],
       2: ['설계 리뷰 미션 읽기', '결말 예측 1건', '머지 or 반려'],
       3: ['독서 카드 + 갈래', '사건 파일 오늘 단서', '설명 시작 칩 고르기 (문장 완성은 선택)'],
-      4: ['기획자 브리핑 읽기', '회의 질문 칩 3개 던지기', '카드 갈래 1장'],
-      5: ['이번 주 리뷰 다시 읽기', '머지 or 반려', '설명 훈련 (선택·주중 유일 타이핑)'],
+      4: ['기획자 브리핑 읽기', '회의 질문 칩 1개 던지기', '카드 갈래 1장'],
+      5: ['아직 되짚을 리뷰가 없습니다', '머지 or 반려', '설명 훈련 (선택·주중 유일 타이핑)'],
     }
 
     for (const [weekday, labels] of Object.entries(expected)) {
@@ -211,6 +211,11 @@ describe('missions store 특성화', () => {
     const wednesday = store.routineForWeekday(3)
     expect(wednesday.slots[0]).toMatchObject({ kind: 'cardFork', missionId: null })
     expect(wednesday.slots[0].linkTo).toMatch(/^\/games\?card=read-/)
+
+    const tuesday = store.routineForWeekday(2)
+    expect(tuesday.slots[0].linkTo).toMatch(
+      /^\/missions\/.+\?tab=briefing#mission-briefing$/,
+    )
 
     for (const weekendDay of [0, 6]) {
       const weekend = store.routineForWeekday(weekendDay)
@@ -265,14 +270,10 @@ describe('missions store 특성화', () => {
     vi.setSystemTime(new Date('2026-08-06T09:00:00+09:00'))
     const thursday = store.routineToday()
     const meetingMissionId = thursday.slots[1].missionId
-    const meetingRequests = [
-      store.sendMeetingChat(meetingMissionId, '첫 번째 질문'),
-      store.sendMeetingChat(meetingMissionId, '두 번째 질문'),
-      store.sendMeetingChat(meetingMissionId, '세 번째 질문'),
-    ]
+    const meetingRequest = store.sendMeetingChat(meetingMissionId, '첫 번째 질문')
     await Promise.resolve()
     await vi.runOnlyPendingTimersAsync()
-    await Promise.all(meetingRequests)
+    await meetingRequest
     expect(store.routineToday().slots[1]).toMatchObject({
       kind: 'plannerMeeting',
       missionId: meetingMissionId,
@@ -391,14 +392,21 @@ describe('missions store 특성화', () => {
     const store = await loadStore()
     const caseId = 'case-vanishing-points-01'
 
+    expect(store.ongoingCaseBanner()).toBeNull()
     expect(store.openCase(caseId, 5)).toMatchObject({
       openedDays: 1,
       lastOpenedDate: '2026-08-03',
       lastViewedDate: '2026-08-03',
     })
+    expect(store.ongoingCaseBanner()).toMatchObject({
+      caseId,
+      day: 1,
+      linkTo: `/games/case/${caseId}`,
+    })
     expect(store.openCase(caseId, 5).openedDays).toBe(1)
 
     vi.setSystemTime(new Date('2026-08-04T09:00:00+09:00'))
+    expect(store.ongoingCaseBanner().day).toBe(2)
     expect(store.openCase(caseId, 5).openedDays).toBe(2)
     store.bingeCase(caseId, 5)
     expect(store.state.caseProgress[caseId].openedDays).toBe(5)
@@ -406,6 +414,7 @@ describe('missions store 특성화', () => {
     expect(store.chooseCaseVerdict(caseId, 'cron-idempotency', 'cron-idempotency', 5)).toBe(true)
     expect(store.chooseCaseVerdict(caseId, 'cache', 'cron-idempotency', 5)).toBe(false)
     expect(store.state.caseProgress[caseId].verdict).toBe('cron-idempotency')
+    expect(store.ongoingCaseBanner()).toBeNull()
     expect(store.seasonOverview().totals.judgment).toBe(3)
 
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY))
@@ -420,14 +429,67 @@ describe('missions store 특성화', () => {
     expect(store.chooseCardFork(cardId, 'debt')).toBe(false)
 
     expect(store.state.cardForkChoices[cardId]).toBe('blessing')
+    expect(store.state.cardForkChoiceDates[cardId]).toBe('2026-08-03')
     expect(store.seasonOverview().totals.culture).toBe(1)
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY))
     expect(saved.cardForkChoices).toEqual({ [cardId]: 'blessing' })
+    expect(saved.cardForkChoiceDates).toEqual({ [cardId]: '2026-08-03' })
     expect(saved.seasonStats.gains).toContainEqual({
       date: '2026-08-03',
       stat: 'culture',
       amount: 1,
       source: `card-fork:${cardId}`,
+    })
+  })
+
+  it('카드 갈래는 오늘 고른 경우만 자동 완료하고 과거 선택은 다시 읽기 체크로 완료한다', async () => {
+    const first = await loadStore()
+    const assignedCardId = new URLSearchParams(first.routineToday().slots[2].linkTo.split('?')[1]).get('card')
+
+    expect(first.routineToday().slots[2]).toMatchObject({
+      kind: 'cardFork',
+      done: false,
+      manualCheckable: false,
+    })
+    expect(first.chooseCardFork(assignedCardId, 'first')).toBe(true)
+    expect(first.routineToday().slots[2].done).toBe(true)
+
+    const returning = await loadStore({
+      cardForkChoices: { [assignedCardId]: 'first' },
+      cardForkChoiceDates: { [assignedCardId]: '2026-08-02' },
+    })
+    expect(returning.routineToday().slots[2]).toMatchObject({
+      kind: 'cardFork',
+      done: false,
+      manualCheckable: true,
+      checkIndex: 2,
+      checkLabel: '다시 읽었어요 ✓',
+    })
+
+    returning.checkRoutineSlot(2)
+    expect(returning.routineToday().slots[2].done).toBe(true)
+  })
+
+  it('금요일 회고는 최신 리뷰 버전의 앵커로 바로 연결한다', async () => {
+    const missionId = 's1-wine-01'
+    const store = await loadStore({
+      submissions: {
+        [missionId]: [{ files: [], submittedAt: '2026-08-02T00:00:00.000Z' }],
+      },
+      reviews: {
+        [missionId]: [
+          { content: { summary: 'v1' }, overall: 70, reviewedAt: '2026-08-02T01:00:00.000Z' },
+          { content: { summary: 'v2' }, overall: 80, reviewedAt: '2026-08-02T02:00:00.000Z' },
+        ],
+      },
+    })
+
+    const recap = store.routineForWeekday(5).slots[0]
+    expect(recap).toMatchObject({
+      kind: 'recapRead',
+      missionId,
+      label: '이번 주 리뷰 다시 읽기',
+      linkTo: `/missions/${missionId}/review?version=2#review-v2`,
     })
   })
 

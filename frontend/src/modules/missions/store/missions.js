@@ -290,6 +290,53 @@ function caseClueDone(state, caseFile, dateStr) {
   return progress?.lastOpenedDate === dateStr || progress?.lastViewedDate === dateStr
 }
 
+function ongoingCaseBanner(state, dateStr) {
+  const caseFile = caseFileData.caseFiles.find((entry) => {
+    const progress = state.caseProgress[entry.id]
+    return progress && !progress.verdict
+  })
+  if (!caseFile) return null
+
+  const progress = state.caseProgress[caseFile.id]
+  const opened = Math.min(caseFile.days.length, Math.max(0, Number(progress.openedDays) || 0))
+  const canAdvance = !progress.lastOpenedDate || progress.lastOpenedDate < dateStr
+  const day = Math.min(caseFile.days.length, opened + (canAdvance && opened < caseFile.days.length ? 1 : 0))
+  return {
+    caseId: caseFile.id,
+    title: caseFile.title,
+    day: Math.max(1, day),
+    linkTo: `/games/case/${caseFile.id}`,
+  }
+}
+
+function makeCardForkRoutineSlot(state, {
+  card,
+  dateStr,
+  emoji,
+  time,
+  label,
+  checkIndex,
+}) {
+  const alreadyChosen = !!(card && state.cardForkChoices[card.id])
+  const chosenToday = !!(card && state.cardForkChoiceDates[card.id] === dateStr)
+  const rereadChecked = !!state.routineChecks[dateStr]?.[checkIndex]
+  const canCheckReread = alreadyChosen && !chosenToday
+
+  return makeRoutineSlot(state, {
+    kind: 'cardFork',
+    title: card?.bookTitle ?? null,
+    linkTo: card ? `/games?card=${card.id}` : '/games',
+    emoji: card?.emoji ?? emoji,
+    time,
+    label,
+    done: chosenToday || (canCheckReread && rereadChecked),
+    dateStr,
+    manualCheckable: canCheckReread,
+    checkIndex,
+    checkLabel: '다시 읽었어요 ✓',
+  })
+}
+
 function pickEndingMission(state, seed, dateStr) {
   const endingMissions = state.missions.filter(
     (mission) => mission.endings?.some((ending) => ending.grade !== 'hidden'),
@@ -351,7 +398,7 @@ function buildMonday(state, seed, dateStr) {
         dateStr,
       }),
       makeRoutineSlot(state, { kind: 'swipeReview', title: '오늘의 판정 5장', linkTo: '/routine/swipe', emoji: '🍜', time: '점심 · 11~17시', label: '머지 or 반려', done: !!state.swipeSessions[dateStr], dateStr }),
-      makeRoutineSlot(state, { kind: 'cardFork', title: forkCard?.bookTitle ?? null, linkTo: forkCard ? `/games?card=${forkCard.id}` : '/games', emoji: forkCard?.emoji ?? '📖', time: '저녁 · 17시~', label: '카드 갈래 1장', done: !!(forkCard && state.cardForkChoices[forkCard.id]), dateStr }),
+      makeCardForkRoutineSlot(state, { card: forkCard, dateStr, emoji: '📖', time: '저녁 · 17시~', label: '카드 갈래 1장', checkIndex: 2 }),
     ],
   }
 }
@@ -364,7 +411,7 @@ function buildTuesday(state, seed, dateStr) {
     name: '판정의 화요일',
     tagline: '읽고 예측하고 판정합니다 — 키보드 없이도 판단은 쌓입니다.',
     slots: [
-      makeRoutineSlot(state, { kind: 'read', mission, emoji: '🚆', time: '출근길 · ~11시', label: noCodeReadLabel(mission), done: !!state.routineChecks[dateStr]?.[0], dateStr, manualCheckable: true, checkIndex: 0 }),
+      makeRoutineSlot(state, { kind: 'read', mission, linkTo: mission ? `/missions/${mission.id}?tab=briefing#mission-briefing` : '/missions', emoji: '🚆', time: '출근길 · ~11시', label: noCodeReadLabel(mission), done: !!state.routineChecks[dateStr]?.[0], dateStr, manualCheckable: true, checkIndex: 0 }),
       makeRoutineSlot(state, { kind: 'endingPrediction', mission: predictionMission, linkTo: predictionMission ? `/missions/${predictionMission.id}?tab=mission#ending-prediction` : '/missions', emoji: '🍜', time: '점심 · 11~17시', label: '결말 예측 1건', done: !!(predictionMission && state.endingPredictionDates[predictionMission.id] === dateStr), dateStr }),
       makeRoutineSlot(state, { kind: 'swipeReview', title: '오늘의 판정 5장', linkTo: '/routine/swipe', emoji: '🌙', time: '저녁 · 17시~', label: '머지 or 반려', done: !!state.swipeSessions[dateStr], dateStr }),
     ],
@@ -380,7 +427,7 @@ function buildWednesday(state, seed, dateStr) {
     name: '교양의 수요일',
     tagline: '읽고 수사하고 문장의 첫 단추만 고릅니다.',
     slots: [
-      makeRoutineSlot(state, { kind: 'cardFork', title: card?.bookTitle ?? null, linkTo: card ? `/games?card=${card.id}` : '/games', emoji: card?.emoji ?? '📖', time: '출근길 · ~11시', label: '독서 카드 + 갈래', done: !!(card && state.cardForkChoices[card.id]), dateStr }),
+      makeCardForkRoutineSlot(state, { card, dateStr, emoji: '📖', time: '출근길 · ~11시', label: '독서 카드 + 갈래', checkIndex: 0 }),
       makeRoutineSlot(state, { kind: 'caseClue', title: caseClueTitle(state, caseFile, dateStr), linkTo: caseFile ? `/games/case/${caseFile.id}` : '/games', emoji: '🍜', time: '점심 · 11~17시', label: '사건 파일 오늘 단서', done: caseClueDone(state, caseFile, dateStr), dateStr }),
       makeRoutineSlot(state, { kind: 'explainStarter', mission: explainMission, linkTo: explainMission ? `/missions/${explainMission.id}?tab=explain#explain-starters` : '/missions', emoji: '🌙', time: '저녁 · 17시~', label: '설명 시작 칩 고르기 (문장 완성은 선택)', done: state.explainChipSelections[dateStr]?.missionId === explainMission?.id, dateStr }),
     ],
@@ -401,16 +448,17 @@ function buildThursday(state, seed, dateStr) {
     tagline: '코드가 아니라 결정을 씁니다 — 검토서로 여는 하루.',
     slots: [
       makeRoutineSlot(state, { kind: 'read', mission, emoji: '🚆', time: '출근길 · ~11시', label: mission ? '기획자 브리핑 읽기' : '브리핑 읽기', done: !!state.routineChecks[dateStr]?.[0], dateStr, manualCheckable: true, checkIndex: 0 }),
-      makeRoutineSlot(state, { kind: 'plannerMeeting', mission: meetingMission, linkTo: meetingMission ? `/missions/${meetingMission.id}?mode=plannerMeeting#meeting-room` : '/missions', emoji: '🍜', time: '점심 · 11~17시', label: '회의 질문 칩 3개 던지기', done: meetingQuestionCountOn(state, meetingMission?.id, dateStr) >= 3, dateStr }),
-      makeRoutineSlot(state, { kind: 'cardFork', title: forkCard?.bookTitle ?? null, linkTo: forkCard ? `/games?card=${forkCard.id}` : '/games', emoji: forkCard?.emoji ?? '📖', time: '저녁 · 17시~', label: '카드 갈래 1장', done: !!(forkCard && state.cardForkChoices[forkCard.id]), dateStr }),
+      makeRoutineSlot(state, { kind: 'plannerMeeting', mission: meetingMission, linkTo: meetingMission ? `/missions/${meetingMission.id}?mode=plannerMeeting#meeting-room` : '/missions', emoji: '🍜', time: '점심 · 11~17시', label: '회의 질문 칩 1개 던지기', done: meetingQuestionCountOn(state, meetingMission?.id, dateStr) >= 1, dateStr }),
+      makeCardForkRoutineSlot(state, { card: forkCard, dateStr, emoji: '📖', time: '저녁 · 17시~', label: '카드 갈래 1장', checkIndex: 2 }),
     ],
   }
 }
 
 function buildFriday(state, seed, dateStr) {
-  const recentlySubmitted = state.missions.filter((m) => submittedWithinDays(state, m.id, 7))
-  const anySubmitted = state.missions.filter((m) => state.submissions[m.id]?.length)
-  const recapMission = pickFromPools([recentlySubmitted, anySubmitted, state.missions], seed)
+  const reviewedMissions = state.missions.filter((mission) => reviewVersions(mission.id).length)
+  const recentlySubmitted = reviewedMissions.filter((mission) => submittedWithinDays(state, mission.id, 7))
+  const recapMission = pickFromPools([recentlySubmitted, reviewedMissions], seed)
+  const recapVersion = recapMission ? reviewVersions(recapMission.id).length : 0
   const recapChecked = !!state.routineChecks[dateStr]?.[0]
   const explainMission = pickExplainMission(state, seed)
   const explainDone = explainMission ? hasExplanationOn(state, explainMission.id, dateStr) : false
@@ -422,7 +470,7 @@ function buildFriday(state, seed, dateStr) {
       makeRoutineSlot(state, {
         kind: 'recapRead',
         mission: recapMission,
-        linkTo: recapMission ? `/missions/${recapMission.id}/review` : '/missions',
+        linkTo: recapMission ? `/missions/${recapMission.id}/review?version=${recapVersion}#review-v${recapVersion}` : '/missions',
         emoji: '🚆',
         time: '출근길 · ~11시',
         label: recapMission ? '이번 주 리뷰 다시 읽기' : '아직 되짚을 리뷰가 없습니다',
@@ -590,6 +638,8 @@ const state = reactive({
   caseProgress: persisted.caseProgress ?? {},
   // 독서·시사회 카드 갈래 질문의 최초 선택. cardId -> choice key
   cardForkChoices: persisted.cardForkChoices ?? {},
+  // 카드 갈래를 최초 선택한 로컬 날짜. 당일 루틴 완료 판정에 사용한다.
+  cardForkChoiceDates: persisted.cardForkChoiceDates ?? {},
   // 4주 시즌 스탯. 구버전 저장 데이터에는 키가 없으므로 오늘을 시즌 시작일로 삼는다.
   seasonStats: normalizeSeasonStats(persisted.seasonStats),
 })
@@ -607,6 +657,7 @@ const JOURNAL_KEYS = [
   'explainChipSelections',
   'caseProgress',
   'cardForkChoices',
+  'cardForkChoiceDates',
   'seasonStats',
 ]
 
@@ -637,6 +688,7 @@ function persist({ syncJournal = true } = {}) {
       explainChipSelections: state.explainChipSelections,
       caseProgress: state.caseProgress,
       cardForkChoices: state.cardForkChoices,
+      cardForkChoiceDates: state.cardForkChoiceDates,
       seasonStats: state.seasonStats,
       _sync: { journalUpdatedAt },
     }),
@@ -989,6 +1041,10 @@ export function useMissions() {
       return { date: dateStr, name: built.name, tagline: built.tagline, slots: built.slots, isToday: diff === 0 }
     },
 
+    ongoingCaseBanner() {
+      return ongoingCaseBanner(state, localDateStr())
+    },
+
     // 슬롯 하나의 수동 체크('읽었어요' 등). checkIndex는 routineToday()가 돌려준 slot.checkIndex.
     checkRoutineSlot(checkIndex) {
       const dateStr = localDateStr()
@@ -1013,6 +1069,7 @@ export function useMissions() {
     chooseCardFork(cardId, choiceKey) {
       if (!cardId || !choiceKey || state.cardForkChoices[cardId]) return false
       state.cardForkChoices[cardId] = choiceKey
+      state.cardForkChoiceDates[cardId] = localDateStr()
       gainSeasonStat('culture', 1, `card-fork:${cardId}`)
       persist()
       return true

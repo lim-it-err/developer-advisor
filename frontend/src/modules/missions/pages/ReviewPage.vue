@@ -14,10 +14,15 @@ const submissionVersions = computed(() => store.state.submissions[route.params.i
 const hasSubmission = computed(() => submissionVersions.value.length > 0)
 const reviewVersions = computed(() => store.getReviews(route.params.id))
 
-const selectedIndex = ref(null)
+function requestedReviewIndex() {
+  const version = Number.parseInt(String(route.query.version ?? ''), 10)
+  return Number.isInteger(version) && version > 0 ? version - 1 : null
+}
+
+const selectedIndex = ref(requestedReviewIndex())
 watch(
-  () => route.params.id,
-  () => { selectedIndex.value = null }, // 미션이 바뀌면 다시 "최신"으로
+  [() => route.params.id, () => route.query.version],
+  () => { selectedIndex.value = requestedReviewIndex() }, // 버전 미지정은 "최신"
 )
 const activeIndex = computed(() =>
   selectedIndex.value != null && reviewVersions.value[selectedIndex.value]
@@ -86,7 +91,7 @@ function itemColor(item) {
     </div>
 
     <!-- 코드 리뷰 -->
-    <section v-if="review" class="card block">
+    <section v-if="review" :id="`review-v${activeIndex + 1}`" class="card block">
       <div class="overall">
         <div class="overall-score" :style="{ color: scoreColor(review.overall) }">
           {{ review.overall }}
